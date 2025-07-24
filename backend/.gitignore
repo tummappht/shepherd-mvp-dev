@@ -1,0 +1,41 @@
+# ---- Python venv & cache ----
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ---- Env/config/secrets ----
+.env
+.env.*
+*.env
+
+# ---- Build/output ----
+*.egg-info/
+*.egg
+dist/
+build/
+*.log
+
+# ---- Test coverage ----
+coverage/
+htmlcov/
+.tox/
+.pytest_cache/
+.cache/
+.nox/
+
+# ---- IDE/editor ----
+*.swp
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ---- OS files ----
+.DS_Store
+Thumbs.db
+
+# ---- Misc ----
+*.bak
+*.tmp
