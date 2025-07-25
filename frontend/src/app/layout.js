@@ -11,9 +11,6 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <div className="flex min-h-screen">
-          <div className="w-60 text-white">
-            <Navbar />
-          </div>
 
           <div className="flex-1 flex flex-col">
             <Header />
