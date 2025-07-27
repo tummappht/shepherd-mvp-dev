@@ -1,32 +1,43 @@
-# Manages all /ws/{run_id} connections
+# ws_manager.py
+from collections import defaultdict, deque
+from typing import Dict, Set
+from fastapi import WebSocket
 
-class WSManager:
+class WebSocketManager:
     """
-    Manages websocket clients and log streaming per run_id
+    • Keeps {run_id → set(WebSocket)}  
+    • Stores the last N messages so late joiners can catch up
     """
-    def __init__(self):
-        self.active_connections = {}  # run_id -> websocket(s)
+    MAX_BUFFER = 2000         # keep last 2 000 log msgs ≈ a few MB total
 
-    async def connect(self, websocket, run_id: str):
-        """
-        Register a websocket for a specific run_id
-        """
-        pass
+    def __init__(self) -> None:
+        self._conns:   Dict[str, Set[WebSocket]] = defaultdict(set)
+        self._buffers: Dict[str, deque]          = defaultdict(lambda: deque(maxlen=self.MAX_BUFFER))
 
-    async def disconnect(self, websocket, run_id: str):
-        """
-        Remove a websocket from active connections
-        """
-        pass
+    async def connect(self, run_id: str, ws: WebSocket) -> None:
+        await ws.accept()
+        self._conns[run_id].add(ws)
 
-    async def send_log(self, run_id: str, log: dict):
-        """
-        Send log line to all connected clients for this run
-        """
-        pass
+        # ① application-level confirmation
+        await ws.send_json({"type": "connection_ack", "run_id": run_id})
 
-    async def get_log(self, run_id: str):
-        """
-        Await next log line for this run (blocking or queue-based)
-        """
-        pass
+        # ② dump any backlog (if the run already started)
+        for msg in self._buffers[run_id]:
+            await ws.send_json(msg)
+
+    def disconnect(self, run_id: str, ws: WebSocket) -> None:
+        self._conns[run_id].discard(ws)
+
+    async def send_log(self, run_id: str, payload: dict) -> None:
+        # cache first
+        self._buffers[run_id].append(payload)
+
+        # then fan-out
+        stale = set()
+        for ws in self._conns[run_id]:
+            try:
+                await ws.send_json(payload)
+            except RuntimeError:
+                stale.add(ws)
+        for ws in stale:
+            self.disconnect(run_id, ws)

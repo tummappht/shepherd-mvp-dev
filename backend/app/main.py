@@ -1,49 +1,51 @@
-#This is the main file and API / WebSocket entrypoint
+# main.py
+import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from fastapi.routing import APIRoute
 
-
-from fastapi import FastAPI, WebSocket, BackgroundTasks
-from models.job import JobRequest, JobStatus, MASLogLine
-from models.db import supabase
-from ws_manager import WSManager
-from mas_bridge import launch_mas
+from .ws_manager import WebSocketManager
+from backend.app.mas_bridge_4 import launch_mas         # same file you already have
 
 app = FastAPI()
-ws_manager = WSManager()
+ws_manager = WebSocketManager()
 
-@app.post("/api/start_run")
-async def start_run(request: JobRequest, background_tasks: BackgroundTasks):
-    """
-    - Save job to Supabase
-    - Launch MAS subprocess via mas_bridge.py
-    - Attach logs to websocket manager
-    - Return run_id to client
-    """
-    pass  # TODO: implement
+class JobRequest(BaseModel):
+    github_url: str
+    contracts: list[str]
+    challenge_name: str
 
-@app.get("/api/run_status/{run_id}")
-async def run_status(run_id: str):
-    """
-    - Return status of given run_id from Supabase
-    """
-    pass
-
-@app.get("/api/run_logs/{run_id}")
-async def run_logs(run_id: str):
-    """
-    - Return logs from Supabase (for history/rehydration)
-    """
-    pass
+@app.post("/runs/{run_id}")
+async def start_run(run_id: str, job: JobRequest, tasks: BackgroundTasks):
+    """Kick off MAS in the background and return 202 immediately."""
+    tasks.add_task(
+        launch_mas,
+        run_id=run_id,
+        job=job.dict(),
+        ws_manager=ws_manager,
+        # log_dir="./logs",
+        # capture_stderr=True,
+    )
+    return JSONResponse({"status": "started", "run_id": run_id}, status_code=202)
 
 @app.websocket("/ws/{run_id}")
-async def websocket_endpoint(websocket: WebSocket, run_id: str):
-    """
-    - Connect client to WebSocket stream for this run
-    - Stream log lines as they arrive from MAS subprocess
-    """
-    await ws_manager.connect(websocket, run_id)
+async def run_logs_ws(ws: WebSocket, run_id: str):
+    await ws_manager.connect(run_id, ws)
+
     try:
+        # We don’t expect frames from client; keep connection alive
         while True:
-            log = await ws_manager.get_log(run_id)
-            await websocket.send_json(log)
-    except Exception:
-        await ws_manager.disconnect(websocket, run_id)
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        ws_manager.disconnect(run_id, ws)
+        
+from fastapi import WebSocket
+
+@app.websocket("/echo/{run_id}")
+async def _echo(ws: WebSocket, run_id: str):
+    await ws.accept()
+    await ws.send_text(f"hello {run_id}")
+    await ws.close()
+
+
