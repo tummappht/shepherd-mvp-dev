@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function Header() {
     return (
-        <div className="w-full h-24 bg-[#0C0C0C] flex items-center justify-between px-20 border-b border-[#353535]">
+        <div className="w-full h-20 bg-[#0C0C0C] flex items-center justify-between px-20 border-b border-[#353535]">
             <div className="flex flex-row pl-6 gap-x-3">
                 <Image
                     src="/shepherd-name.png"
@@ -16,7 +16,7 @@ export default function Header() {
                 <Image
                     src="/images/pfp.png"
                     height={30}
-                    width={50}
+                    width={30}
                     alt="Profile Picture"
                 />
                 <div className="flex flex-col">

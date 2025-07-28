@@ -7,15 +7,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <div className="flex min-h-screen">
-
-          <div className="flex-1 flex flex-col">
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <body className="h-screen">
+          <div className="flex flex-col h-full">
             <Header />
-            <main className="flex-1 overflow-auto">{children}</main>
+            <main className="flex-1 relative overflow-auto">{children}</main>
           </div>
-        </div>
       </body>
     </html>
   );
