@@ -1,14 +1,15 @@
 # main.py
 import asyncio
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Dict
+from typing import Dict, Optional, List
 import json
 
 from .ws_manager import WebSocketManager
-from backend.app.mas_bridge import launch_mas_interactive, create_ws_input_handler
+from .mas_bridge import launch_mas_interactive, create_ws_input_handler
+from .models.db import create_repository_analysis, get_repository_analysis, update_analysis_status
 
 app = FastAPI()
 ws_manager = WebSocketManager()
@@ -19,6 +20,62 @@ input_queues: Dict[str, asyncio.Queue] = {}
 class JobRequest(BaseModel):
     github_url: str
 
+class RepositoryAnalysisRequest(BaseModel):
+    repository_url: str
+    project_description: str
+    environment: str  # "local" or "testnet"
+    user_id: Optional[str] = None
+    reference_files: Optional[List[str]] = None
+
+@app.post("/api/repository-analysis")
+async def create_repository_analysis_endpoint(request: RepositoryAnalysisRequest):
+    """
+    Create a new repository analysis request and store in Supabase
+    """
+    try:
+        # Validate environment
+        if request.environment not in ["local", "testnet"]:
+            raise HTTPException(status_code=400, detail="Environment must be 'local' or 'testnet'")
+        
+        # Create the analysis record in Supabase
+        analysis_record = create_repository_analysis(
+            repository_url=request.repository_url,
+            project_description=request.project_description,
+            environment=request.environment,
+            user_id=request.user_id,
+            reference_files=request.reference_files
+        )
+        
+        return JSONResponse({
+            "success": True,
+            "run_id": analysis_record["run_id"],
+            "message": "Repository analysis created successfully",
+            "data": analysis_record
+        }, status_code=201)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create repository analysis: {str(e)}")
+
+@app.get("/api/repository-analysis/{run_id}")
+async def get_repository_analysis_endpoint(run_id: str):
+    """
+    Get a repository analysis by run_id
+    """
+    try:
+        analysis = get_repository_analysis(run_id)
+        
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Repository analysis not found")
+        
+        return JSONResponse({
+            "success": True,
+            "data": analysis
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch repository analysis: {str(e)}")
 
 @app.post("/runs/{run_id}")
 async def start_run(run_id: str, job: JobRequest, tasks: BackgroundTasks):
