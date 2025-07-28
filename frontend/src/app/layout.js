@@ -1,5 +1,4 @@
 import "./globals.css";
-import Navbar from "@/components/Navbar";
 import Header from "@/components/Header";
 
 export const metadata = {
@@ -8,7 +7,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <div className="flex min-h-screen">
 
