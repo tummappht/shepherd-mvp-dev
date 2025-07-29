@@ -128,6 +128,25 @@ def list_user_analyses(user_id: str, limit: int = 50) -> List[dict]:
         print(f"Error fetching user analyses: {e}")
         return []
 
+def delete_repository_analysis(run_id: str) -> bool:
+    """
+    Delete a repository analysis by run_id
+    
+    Args:
+        run_id: Unique identifier for the analysis
+    
+    Returns:
+        bool: True if deleted successfully, False otherwise
+    """
+    try:
+        result = supabase.table("repository_analyses").delete().eq("run_id", run_id).execute()
+        
+        return len(result.data) > 0
+        
+    except Exception as e:
+        print(f"Error deleting repository analysis: {e}")
+        return False
+
 # Legacy functions (keeping for backward compatibility)
 def insert_job(job: dict):
     """
