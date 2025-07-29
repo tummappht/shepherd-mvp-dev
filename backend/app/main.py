@@ -9,7 +9,7 @@ import json
 
 from .ws_manager import WebSocketManager
 from .mas_bridge import launch_mas_interactive, create_ws_input_handler
-from .models.db import create_repository_analysis, get_repository_analysis, update_analysis_status
+from .models.db import create_repository_analysis, get_repository_analysis, update_analysis_status, list_user_analyses, delete_repository_analysis
 
 app = FastAPI()
 ws_manager = WebSocketManager()
@@ -25,6 +25,12 @@ class RepositoryAnalysisRequest(BaseModel):
     project_description: str
     environment: str  # "local" or "testnet"
     user_id: Optional[str] = None
+    reference_files: Optional[List[str]] = None
+
+class RepositoryUpdateRequest(BaseModel):
+    repository_url: Optional[str] = None
+    project_description: Optional[str] = None
+    environment: Optional[str] = None
     reference_files: Optional[List[str]] = None
 
 @app.post("/api/repository-analysis")
@@ -76,6 +82,109 @@ async def get_repository_analysis_endpoint(run_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch repository analysis: {str(e)}")
+
+@app.get("/api/my-repositories")
+async def get_my_repositories(user_id: str = "@0xps", limit: int = 50):
+    """
+    Get all repository analyses for a user (My Repositories)
+    """
+    try:
+        repositories = list_user_analyses(user_id, limit)
+        
+        # Format the response to match the UI
+        formatted_repos = []
+        for repo in repositories:
+            # Extract repository name from URL for display
+            repo_name = repo["repository_url"].split("/")[-1] if repo["repository_url"] else "Unknown"
+            
+            formatted_repos.append({
+                "run_id": repo["run_id"],
+                "repository_url": repo["repository_url"],
+                "repository_name": repo_name,
+                "environment": repo["environment"],
+                "status": repo["status"],
+                "created_at": repo["created_at"],
+                "updated_at": repo["updated_at"]
+            })
+        
+        return JSONResponse({
+            "success": True,
+            "data": formatted_repos
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch repositories: {str(e)}")
+
+@app.put("/api/repository-analysis/{run_id}")
+async def update_repository_analysis_endpoint(run_id: str, request: RepositoryUpdateRequest):
+    """
+    Update a repository analysis
+    """
+    try:
+        # Get existing analysis
+        existing_analysis = get_repository_analysis(run_id)
+        
+        if not existing_analysis:
+            raise HTTPException(status_code=404, detail="Repository analysis not found")
+        
+        # Prepare update data
+        update_data = {}
+        
+        if request.repository_url is not None:
+            update_data["repository_url"] = request.repository_url
+        if request.project_description is not None:
+            update_data["project_description"] = request.project_description
+        if request.environment is not None:
+            if request.environment not in ["local", "testnet"]:
+                raise HTTPException(status_code=400, detail="Environment must be 'local' or 'testnet'")
+            update_data["environment"] = request.environment
+        if request.reference_files is not None:
+            update_data["reference_files"] = request.reference_files
+        
+        # Update the analysis
+        update_analysis_status(run_id, existing_analysis["status"], update_data)
+        
+        # Get updated analysis
+        updated_analysis = get_repository_analysis(run_id)
+        
+        return JSONResponse({
+            "success": True,
+            "message": "Repository analysis updated successfully",
+            "data": updated_analysis
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update repository analysis: {str(e)}")
+
+@app.delete("/api/repository-analysis/{run_id}")
+async def delete_repository_analysis_endpoint(run_id: str):
+    """
+    Delete a repository analysis
+    """
+    try:
+        # Get existing analysis
+        existing_analysis = get_repository_analysis(run_id)
+        
+        if not existing_analysis:
+            raise HTTPException(status_code=404, detail="Repository analysis not found")
+        
+        # Delete from Supabase
+        success = delete_repository_analysis(run_id)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete repository analysis")
+        
+        return JSONResponse({
+            "success": True,
+            "message": "Repository analysis deleted successfully"
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete repository analysis: {str(e)}")
 
 @app.post("/runs/{run_id}")
 async def start_run(run_id: str, job: JobRequest, tasks: BackgroundTasks):
