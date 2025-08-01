@@ -310,17 +310,85 @@ async def launch_mas_interactive(
             # Configuration for WebSocket buffering
             WS_SEND_INTERVAL = 0.1  # Send every 100ms
             WS_FORCE_SEND_ON_NEWLINE = True  # Send immediately on newline
+            WS_MIN_CHUNK_SIZE = 20  # Minimum characters before considering a send
+            WS_MAX_BUFFER_SIZE = 500  # Maximum buffer size before forced send
             
-            async def send_ws_buffer():
+            # Patterns to detect lines that should be completely filtered out
+            FILTER_PATTERNS = [
+                r'API_KEY:\s*[a-zA-Z0-9\-_]{20,}'
+            ]
+            
+            def should_filter_line(text):
+                """Check if a line contains sensitive information and should be filtered"""
+                for pattern in FILTER_PATTERNS:
+                    if re.search(pattern, text, re.IGNORECASE):
+                        return True
+                return False
+            
+            def filter_sensitive_content(text):
+                """Filter out lines containing sensitive information"""
+                lines = text.split('\n')
+                filtered_lines = []
+                
+                for i, line in enumerate(lines):
+                    # Check if this line should be filtered
+                    if should_filter_line(line):
+                        continue
+                    
+                    # Keep the line
+                    filtered_lines.append(line)
+                
+                # Reconstruct the text, preserving newlines
+                result = '\n'.join(filtered_lines)
+                
+                # Handle edge case where original text ended with newline
+                if text.endswith('\n') and not result.endswith('\n'):
+                    result += '\n'
+                
+                return result
+            
+            async def send_ws_buffer(force=False):
                 """Send buffered WebSocket data if any"""
                 nonlocal ws_buffer, last_ws_send_time
-                if ws_buffer and ws_manager:
+                
+                if not ws_buffer or not ws_manager:
+                    return
+                
+                # If not forcing, try to send at natural boundaries
+                if not force and len(ws_buffer) < WS_MAX_BUFFER_SIZE:
+                    # Check if buffer ends with incomplete word
+                    if ws_buffer and ws_buffer[-1] not in ' \n\t.,;:!?)]}>':
+                        # We're in the middle of a word, wait for more
+                        if len(ws_buffer) < WS_MIN_CHUNK_SIZE:
+                            return
+                        
+                        # Try to find last complete word
+                        last_space = ws_buffer.rfind(' ')
+                        last_newline = ws_buffer.rfind('\n')
+                        last_boundary = max(last_space, last_newline)
+                        
+                        if last_boundary > 0 and last_boundary > len(ws_buffer) - 50:
+                            # Send up to the last complete word
+                            to_send = ws_buffer[:last_boundary + 1]
+                            filtered_data = filter_sensitive_content(to_send)
+                            if filtered_data:  # Only send if there's content after filtering
+                                await ws_manager.send_log(run_id, {
+                                    "type": "output",
+                                    "data": filtered_data
+                                })
+                            ws_buffer = ws_buffer[last_boundary + 1:]
+                            last_ws_send_time = asyncio.get_event_loop().time()
+                            return
+                
+                # Send the entire buffer
+                filtered_data = filter_sensitive_content(ws_buffer)
+                if filtered_data:  # Only send if there's content after filtering
                     await ws_manager.send_log(run_id, {
                         "type": "output",
-                        "data": ws_buffer
+                        "data": filtered_data
                     })
-                    ws_buffer = ""
-                    last_ws_send_time = asyncio.get_event_loop().time()
+                ws_buffer = ""
+                last_ws_send_time = asyncio.get_event_loop().time()
             
             while True:
                 # Read one byte at a time for better control
@@ -331,7 +399,7 @@ async def launch_mas_interactive(
                     no_output_count += 1
                     
                     # Send any buffered WebSocket data on timeout
-                    if ws_buffer:
+                    if ws_buffer and (current_time - last_ws_send_time) >= WS_SEND_INTERVAL:
                         await send_ws_buffer()
                     
                     # No new data - check various conditions
@@ -432,9 +500,9 @@ async def launch_mas_interactive(
                     
                     # Normal prompt detection
                     if buffer and detector.should_wait_for_input(buffer, time_since_last):
-                        # Send any remaining buffer before prompt
+                        # Send any remaining buffer before prompt (force send to clear everything)
                         if ws_buffer:
-                            await send_ws_buffer()
+                            await send_ws_buffer(force=True)
                         
                         prompt_line = buffer.strip()
                         
@@ -519,13 +587,19 @@ async def launch_mas_interactive(
                 if WS_FORCE_SEND_ON_NEWLINE and char == '\n':
                     should_send = True
                 
-                # Check if we should send based on time interval
-                elif (current_time - last_ws_send_time) >= WS_SEND_INTERVAL:
+                # Check if buffer is getting too large
+                elif len(ws_buffer) >= WS_MAX_BUFFER_SIZE:
                     should_send = True
+                
+                # Check if we should send based on time interval and natural boundaries
+                elif (current_time - last_ws_send_time) >= WS_SEND_INTERVAL and len(ws_buffer) >= WS_MIN_CHUNK_SIZE:
+                    # Check if we're at a natural boundary
+                    if char in ' \n\t.,;:!?)]}>':
+                        should_send = True
                 
                 # Send if conditions are met
                 if should_send and ws_buffer:
-                    await send_ws_buffer()
+                    await send_ws_buffer(force=(char == '\n' or len(ws_buffer) >= WS_MAX_BUFFER_SIZE))
                 
                 # Handle newlines for buffer management
                 if char == '\n':
@@ -535,9 +609,9 @@ async def launch_mas_interactive(
                     buffer = ""
                     line_buffer = ""
         
-        # Send any remaining buffered data
+        # Send any remaining buffered data (force send to clear everything)
         if ws_buffer:
-            await send_ws_buffer()
+            await send_ws_buffer(force=True)
         
         # Close stdin
         process.stdin.close()
