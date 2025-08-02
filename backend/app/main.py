@@ -33,6 +33,16 @@ class RepositoryUpdateRequest(BaseModel):
     environment: Optional[str] = None
     reference_files: Optional[List[str]] = None
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or specify your frontend origin like ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],  # <- this is important
+    allow_headers=["*"],
+)
+
 @app.post("/api/repository-analysis")
 async def create_repository_analysis_endpoint(request: RepositoryAnalysisRequest):
     """
