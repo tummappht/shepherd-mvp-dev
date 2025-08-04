@@ -43,3 +43,5 @@ Thumbs.db
 /test_logs
 /backend/test_logs
 /logs
+
+/myenv

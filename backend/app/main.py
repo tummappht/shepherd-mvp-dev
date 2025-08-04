@@ -8,7 +8,7 @@ from typing import Dict, Optional, List
 import json
 
 from .ws_manager import WebSocketManager
-from .mas_bridge_3 import launch_mas_interactive, create_ws_input_handler
+from .mas_bridge_4 import launch_mas_interactive, create_ws_input_handler
 from .models.db import create_repository_analysis, get_repository_analysis, update_analysis_status, list_user_analyses, delete_repository_analysis
 
 app = FastAPI()
