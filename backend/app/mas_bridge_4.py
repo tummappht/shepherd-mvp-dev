@@ -1,3 +1,4 @@
+#deployment ver 
 import asyncio
 import os
 import re
@@ -9,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration for MAS repository
-MAS_REPO_PATH = os.environ.get("MAS_REPO_PATH", "../blackRabbit")
+MAS_REPO_PATH = os.environ.get("MAS_REPO_PATH", "../mas")
 MAS_PYTHON_PATH = os.environ.get("MAS_PYTHON_PATH", "python")
 
 # Global state for tracking output patterns
@@ -22,6 +23,7 @@ class PromptDetector:
         self.seen_prompts = set()  # Remember prompts we've seen
         self.waiting_for_multiline = False
         self.multiline_empty_count = 0
+        self.detected_prompts = set()  # Track prompts we've detected for filtering
         
     def add_line(self, line: str):
         """Add a line to history"""
@@ -190,13 +192,309 @@ class PromptDetector:
         
         return False
 
+# Add this class before launch_mas_interactive
+class OutputBuffer:
+    """Smart buffer that holds back potential prompts"""
+    def __init__(self, ws_manager, run_id, detector):
+        self.ws_manager = ws_manager
+        self.run_id = run_id
+        self.detector = detector
+        self.buffer = ""
+        self.hold_buffer = ""  # Buffer for holding potential prompts
+        self.last_newline_sent = True
+        
+    async def add_char(self, char: str):
+        """Add a character and manage buffering"""
+        self.buffer += char
+        
+        if char == '\n':
+            # We have a complete line
+            line = self.buffer.strip()
+            
+            # Special check for hypothesis prompts
+            hypothesis_patterns = [
+                "Enter hypothesis (press Enter twice when done):",
+                "Enter your detailed vulnerability hypothesis"
+            ]
+            
+            is_hypothesis_prompt = any(pattern in line for pattern in hypothesis_patterns)
+            
+            # Check if this line looks like a prompt (including hypothesis prompts)
+            if self.detector.is_likely_prompt(line) or is_hypothesis_prompt:
+                # Hold this line - don't send it yet
+                self.hold_buffer = self.buffer
+                self.buffer = ""
+                return
+            else:
+                # Not a prompt, send any held buffer first
+                if self.hold_buffer:
+                    await self._send(self.hold_buffer)
+                    self.hold_buffer = ""
+                
+                # Send current buffer
+                await self._send(self.buffer)
+                self.buffer = ""
+                self.last_newline_sent = True
+        else:
+            # Still building a line
+            self.last_newline_sent = False
+            
+            # If buffer is getting large and we have no held content, send it
+            if len(self.buffer) > 200 and not self.hold_buffer:
+                await self._send(self.buffer)
+                self.buffer = ""
+    
+    async def flush_if_not_prompt(self):
+        """Flush buffers if they don't contain prompts"""
+        if self.hold_buffer:
+            # We were holding a potential prompt
+            line = self.hold_buffer.strip()
+            
+            # Special check for hypothesis prompts
+            hypothesis_patterns = [
+                "Enter hypothesis (press Enter twice when done):",
+                "Enter your detailed vulnerability hypothesis"
+            ]
+            
+            is_hypothesis_prompt = any(pattern in line for pattern in hypothesis_patterns)
+            
+            if not self.detector.is_likely_prompt(line) and not is_hypothesis_prompt:
+                # False alarm, send it
+                await self._send(self.hold_buffer)
+            self.hold_buffer = ""
+        
+        if self.buffer:
+            line = self.buffer.strip()
+            hypothesis_patterns = [
+                "Enter hypothesis (press Enter twice when done):",
+                "Enter your detailed vulnerability hypothesis"
+            ]
+            
+            is_hypothesis_prompt = any(pattern in line for pattern in hypothesis_patterns)
+            
+            if not self.detector.is_likely_prompt(line) and not is_hypothesis_prompt:
+                await self._send(self.buffer)
+                self.buffer = ""
+    
+    def clear_prompt(self):
+        """Clear held prompt buffer when we confirm it's a prompt"""
+        self.hold_buffer = ""
+        self.buffer = ""
+    
+    async def force_flush(self):
+        """Force send all buffers"""
+        if self.hold_buffer:
+            await self._send(self.hold_buffer)
+            self.hold_buffer = ""
+        if self.buffer:
+            await self._send(self.buffer)
+            self.buffer = ""
+    
+    async def _send(self, data: str):
+        """Send data via WebSocket"""
+        if data and self.ws_manager:
+            # Apply sensitive content filtering here
+            filtered_data = self._filter_sensitive_content(data)
+            if filtered_data:
+                await self.ws_manager.send_log(self.run_id, {
+                    "type": "output",
+                    "data": filtered_data
+                })
+    
+    def _filter_sensitive_content(self, text):
+        """Filter out lines containing sensitive information"""
+        FILTER_PATTERNS = [
+            r'API_KEY:\s*[a-zA-Z0-9\-_]{20,}'
+        ]
+        
+        lines = text.split('\n')
+        filtered_lines = []
+        
+        for line in lines:
+            # Check if this line should be filtered
+            should_filter = False
+            for pattern in FILTER_PATTERNS:
+                if re.search(pattern, line, re.IGNORECASE):
+                    should_filter = True
+                    break
+            
+            if not should_filter:
+                filtered_lines.append(line)
+        
+        # Reconstruct the text, preserving newlines
+        result = '\n'.join(filtered_lines)
+        
+        # Handle edge case where original text ended with newline
+        if text.endswith('\n') and not result.endswith('\n'):
+            result += '\n'
+        
+        return result
+
+# Add this class before launch_mas_interactive
+class OutputBuffer:
+    """Smart buffer that holds back potential prompts"""
+    def __init__(self, ws_manager, run_id, detector):
+        self.ws_manager = ws_manager
+        self.run_id = run_id
+        self.detector = detector
+        self.buffer = ""
+        self.hold_buffer = ""  # Buffer for holding potential prompts
+        self.last_newline_sent = True
+        
+    async def add_char(self, char: str):
+        """Add a character and manage buffering"""
+        self.buffer += char
+        
+        if char == '\n':
+            # We have a complete line
+            line = self.buffer.strip()
+            
+            # Special check for hypothesis prompts and related lines
+            hypothesis_patterns = [
+                "Enter hypothesis (press Enter twice when done):",
+                "Enter your detailed vulnerability hypothesis",
+                "Example: 'This function allows",  # The example line
+                "Example:",  # Any example line
+                "(2-3 lines):",  # The instruction line
+            ]
+            
+            # Also check if this is part of a multi-line prompt sequence
+            is_hypothesis_related = any(pattern in line for pattern in hypothesis_patterns)
+            
+            # Check if recent lines contained hypothesis prompt indicators
+            recent_has_hypothesis = False
+            if len(self.detector.recent_lines) > 0:
+                for recent in self.detector.recent_lines[-3:]:
+                    if any(pattern in recent for pattern in ["Enter hypothesis", "vulnerability hypothesis"]):
+                        recent_has_hypothesis = True
+                        break
+            
+            # If this line is related to hypothesis prompt or follows one, hold it
+            if (self.detector.is_likely_prompt(line) or 
+                is_hypothesis_related or 
+                (recent_has_hypothesis and line.startswith("Example:"))):
+                # Hold this line - don't send it yet
+                self.hold_buffer = self.buffer
+                self.buffer = ""
+                return
+            else:
+                # Not a prompt, send any held buffer first
+                if self.hold_buffer:
+                    await self._send(self.hold_buffer)
+                    self.hold_buffer = ""
+                
+                # Send current buffer
+                await self._send(self.buffer)
+                self.buffer = ""
+                self.last_newline_sent = True
+        else:
+            # Still building a line
+            self.last_newline_sent = False
+            
+            # If buffer is getting large and we have no held content, send it
+            if len(self.buffer) > 200 and not self.hold_buffer:
+                await self._send(self.buffer)
+                self.buffer = ""
+    
+    async def flush_if_not_prompt(self):
+        """Flush buffers if they don't contain prompts"""
+        if self.hold_buffer:
+            # We were holding a potential prompt
+            line = self.hold_buffer.strip()
+            
+            # Special check for hypothesis prompts and related lines
+            hypothesis_patterns = [
+                "Enter hypothesis (press Enter twice when done):",
+                "Enter your detailed vulnerability hypothesis",
+                "Example: 'This function allows",
+                "Example:",
+                "(2-3 lines):",
+            ]
+            
+            is_hypothesis_related = any(pattern in line for pattern in hypothesis_patterns)
+            
+            if not self.detector.is_likely_prompt(line) and not is_hypothesis_related:
+                # False alarm, send it
+                await self._send(self.hold_buffer)
+            self.hold_buffer = ""
+        
+        if self.buffer:
+            line = self.buffer.strip()
+            hypothesis_patterns = [
+                "Enter hypothesis (press Enter twice when done):",
+                "Enter your detailed vulnerability hypothesis",
+                "Example: 'This function allows",
+                "Example:",
+                "(2-3 lines):",
+            ]
+            
+            is_hypothesis_related = any(pattern in line for pattern in hypothesis_patterns)
+            
+            if not self.detector.is_likely_prompt(line) and not is_hypothesis_related:
+                await self._send(self.buffer)
+                self.buffer = ""
+    
+    def clear_prompt(self):
+        """Clear held prompt buffer when we confirm it's a prompt"""
+        self.hold_buffer = ""
+        self.buffer = ""
+    
+    async def force_flush(self):
+        """Force send all buffers"""
+        if self.hold_buffer:
+            await self._send(self.hold_buffer)
+            self.hold_buffer = ""
+        if self.buffer:
+            await self._send(self.buffer)
+            self.buffer = ""
+    
+    async def _send(self, data: str):
+        """Send data via WebSocket"""
+        if data and self.ws_manager:
+            # Apply sensitive content filtering here
+            filtered_data = self._filter_sensitive_content(data)
+            if filtered_data:
+                await self.ws_manager.send_log(self.run_id, {
+                    "type": "output",
+                    "data": filtered_data
+                })
+    
+    def _filter_sensitive_content(self, text):
+        """Filter out lines containing sensitive information"""
+        FILTER_PATTERNS = [
+            r'API_KEY:\s*[a-zA-Z0-9\-_]{20,}'
+        ]
+        
+        lines = text.split('\n')
+        filtered_lines = []
+        
+        for line in lines:
+            # Check if this line should be filtered
+            should_filter = False
+            for pattern in FILTER_PATTERNS:
+                if re.search(pattern, line, re.IGNORECASE):
+                    should_filter = True
+                    break
+            
+            if not should_filter:
+                filtered_lines.append(line)
+        
+        # Reconstruct the text, preserving newlines
+        result = '\n'.join(filtered_lines)
+        
+        # Handle edge case where original text ended with newline
+        if text.endswith('\n') and not result.endswith('\n'):
+            result += '\n'
+        
+        return result
+
 
 async def launch_mas_interactive(
     run_id: str, 
     job: dict, 
     input_handler: Callable,
     ws_manager=None,
-    log_dir: str = "./backend/logs"
+    log_dir: str = "./backend/logs",
 ) -> Dict[str, Any]:
     """
     Launch MAS subprocess with interactive input/output support via WebSocket
@@ -269,6 +567,7 @@ async def launch_mas_interactive(
                     "working_dir": str(mas_repo)
                 }
             })
+
         
         # Create subprocess
         process = await asyncio.create_subprocess_exec(
@@ -294,8 +593,38 @@ async def launch_mas_interactive(
                 }
             })
         
+        # Start a task to monitor stderr
+        async def monitor_stderr():
+            while True:
+                try:
+                    stderr_line = await process.stderr.readline()
+                    if not stderr_line:
+                        break
+                    stderr_text = stderr_line.decode('utf-8', errors='ignore')
+                    print(f"[STDERR] {stderr_text}", end='')
+                    
+                    # Log stderr to file
+                    with open(log_file_path.with_suffix('.stderr.log'), 'a') as stderr_log:
+                        stderr_log.write(stderr_text)
+                    
+                    # Send stderr via WebSocket
+                    if ws_manager:
+                        await ws_manager.send_log(run_id, {
+                            "type": "stderr",
+                            "data": stderr_text
+                        })
+                except Exception as e:
+                    print(f"[STDERR MONITOR ERROR] {e}")
+                    break
+        
+        # Start stderr monitoring in background
+        stderr_task = asyncio.create_task(monitor_stderr())
+        
         # Initialize prompt detector
         detector = PromptDetector()
+        
+        # Initialize the smart output buffer
+        output_buffer = OutputBuffer(ws_manager, run_id, detector)
         
         # Open log file
         with open(log_file_path, 'w', encoding='utf-8') as log_file:
@@ -312,6 +641,9 @@ async def launch_mas_interactive(
                     no_output_count = 0  # Reset when we get data
                 except asyncio.TimeoutError:
                     no_output_count += 1
+                    
+                    # Flush non-prompt buffers on timeout
+                    await output_buffer.flush_if_not_prompt()
                     
                     # No new data - check various conditions
                     current_time = asyncio.get_event_loop().time()
@@ -331,6 +663,9 @@ async def launch_mas_interactive(
 
                         detector.waiting_for_multiline = True
                         detector.seen_prompts.add("hypothesis_silent_wait")
+                        
+                        # Clear any prompt from output buffer
+                        output_buffer.clear_prompt()
                         
                         # Send prompt notification via WebSocket
                         if ws_manager:
@@ -421,10 +756,18 @@ async def launch_mas_interactive(
                         # Skip if this is the hypothesis case (already handled above)
                         if "hypothesis_silent_wait" in detector.seen_prompts:
                             continue
-                            
+                        
+                        # Skip if already seen this exact prompt
+                        if prompt_line in detector.seen_prompts:
+                            continue
+                        
+                        # Clear the prompt from our output buffer
+                        output_buffer.clear_prompt()
+                        
+                        # Mark this prompt as seen
                         detector.seen_prompts.add(prompt_line)
                         
-                        # Send prompt notification via WebSocket
+                        # Send prompt notification via WebSocket (this is the ONLY place the prompt should be sent)
                         if ws_manager:
                             await ws_manager.send_log(run_id, {
                                 "type": "prompt",
@@ -473,11 +816,15 @@ async def launch_mas_interactive(
                 
                 # Update last character time
                 last_char_time = asyncio.get_event_loop().time()
+                current_time = last_char_time
                 
                 # Decode character
                 char = data.decode('utf-8', errors='ignore')
                 buffer += char
                 line_buffer += char
+                
+                # Add to smart output buffer
+                await output_buffer.add_char(char)
                 
                 # Write to log
                 log_file.write(char)
@@ -485,14 +832,7 @@ async def launch_mas_interactive(
                 print(char, end='', flush=True)
                 all_output.append(char)
                 
-                # Send character to WebSocket for real-time display
-                if ws_manager and char:
-                    await ws_manager.send_log(run_id, {
-                        "type": "output",
-                        "data": char
-                    })
-                
-                # Handle newlines
+                # Handle newlines for buffer management
                 if char == '\n':
                     # Add completed line to detector history
                     if buffer.strip():
@@ -500,13 +840,24 @@ async def launch_mas_interactive(
                     buffer = ""
                     line_buffer = ""
         
+        # Force flush any remaining data
+        await output_buffer.force_flush()
+        
         # Close stdin
         process.stdin.close()
         
+        print(f"\n[SHEPHERD DEBUG] Main loop ended. Process returncode: {process.returncode}")
+        print(f"[SHEPHERD DEBUG] Last output lines:")
+        for line in detector.recent_lines[-10:]:
+            print(f"  > {line}")
+            
         # Wait for process to complete
         return_code = await process.wait()
         
         print(f"\n[SHEPHERD] Process exited with code: {return_code}")
+        
+        last_output = "".join(all_output[-500:]) if all_output else ""
+        print(f"[SHEPHERD DEBUG] Last 500 chars of output:\n{last_output}")
         
         # Send completion notification
         if ws_manager:
@@ -548,6 +899,7 @@ async def launch_mas_interactive(
         }
 
 
+
 # Helper function for creating WebSocket-based input handler
 def create_ws_input_handler(run_id: str, input_queue: asyncio.Queue):
     """
@@ -559,15 +911,3 @@ def create_ws_input_handler(run_id: str, input_queue: asyncio.Queue):
         return user_input
     
     return handler
-# Launches MAS subprocess and streams logs to the frontend
-
-import asyncio
-
-async def launch_mas(run_id: str, job: dict, ws_manager):
-    """
-    - Launch MAS subprocess (as async process)
-    - Pipe stdout/stderr to ws_manager for this run_id
-    - Optionally parse stdout lines and push as MASLogLine
-    - Save output to Supabase for history
-    """
-    pass  # TODO: implement MAS subprocess orchestration
