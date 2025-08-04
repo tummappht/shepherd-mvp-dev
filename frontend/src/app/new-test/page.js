@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import References from "@/components/References";
 import ModalWrapper from "@/components/ModalWrapper";
 import { useState } from "react";
@@ -10,6 +11,8 @@ export default function NewTest() {
     const [selectedReference, setSelectedReference] = useState(null);
     const [attachedReference, setAttachedReference] = useState(null);
     const [selectedEnv, setSelectedEnv] = useState(null);
+    const [repoUrl, setRepoUrl] = useState("");
+    const router = useRouter();
 
     const handleAttach = () => {
         if(selectedReference) {
@@ -31,6 +34,8 @@ export default function NewTest() {
                     type="text"
                     className="w-full p-4 border border-[#232323] rounded-md bg-[#0C0C0C] text-[#595959] placeholder-[#595959] placeholder:italic"
                     placeholder="Enter URL..."
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
                 />
             </div>
             <div className="flex flex-col space-y-4">
@@ -115,9 +120,18 @@ export default function NewTest() {
                             Testnet
                         </button>
                     </div>
-                    <Link href="/mas-run">
-                        <button className="bg-[#df153e] px-6 py-3 rounded-lg hover:scale-105">Next</button>
-                    </Link>
+                    <button
+                        className="bg-[#df153e] px-6 py-3 rounded-lg hover:scale-105"
+                        onClick={() => {
+                            if (repoUrl.trim()) {
+                            router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
+                            } else {
+                            alert("Please enter a repository URL.");
+                            }
+                        }}
+                    >
+                        Next
+                    </button>
                 </div>
             </div>
             {showRef && (

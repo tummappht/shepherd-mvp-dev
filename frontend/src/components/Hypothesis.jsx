@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { FaEdit, FaWindowMinimize } from "react-icons/fa";
+import { useSearchParams } from "next/navigation";
 
 const socketUrl = "ws://localhost:8000/ws/test-123";
 
@@ -8,77 +9,93 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [typing, setTyping] = useState(false);
+    const [waitingForInput, setWaitingForInput] = useState(false);
+
     const messagesEndRef = useRef(null);
     const socketRef = useRef(null);
+    const searchParams = useSearchParams();
+    const repoUrl = searchParams.get("repoUrl");
+
+    const shouldSkipLine = (line) => {
+        return line?.includes("Please enter a GitHub URL") || line?.includes("=======");
+    };
 
     // Trigger MAS run on mount
     useEffect(() => {
+        if (!repoUrl) return;
         fetch("http://localhost:8000/runs/test-123", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                github_url: "https://github.com/dhruvjain2905/naive-receiver"
-            })
-        }).then(res => res.json()).then(console.log);
-    }, []);
+            body: JSON.stringify({ github_url: repoUrl }),
+        });
+    }, [repoUrl]);
 
     useEffect(() => {
         const socket = new WebSocket(socketUrl);
         socketRef.current = socket;
 
-        let accumulated = "";
+        socket.onopen = () => {
+            console.log("WebSocket connected");
+        };
 
-        socket.onopen = () => console.log("WebSocket connected");
+        let lastOutputBuffer = "";
 
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
+            if (shouldSkipLine(message.data)) return;
 
-            if (message.type === "output") {
-                accumulated += message.data;
+            if (message.type === "prompt") {
+                if (promptText.includes("Please enter a GitHub URL")) {
+                    setMessages((prev) => [...prev, {
+                        from: "system",
+                        text: promptText
+                    }]);
 
-                // Optional: Debounced update
-                setTyping(true);
-                setMessages((prev) => {
-                    const updated = [...prev];
-                    // Replace last system message if it's mid-stream
-                    if (updated.length && updated[updated.length - 1].from === "system" && updated[updated.length - 1].streaming) {
-                        updated[updated.length - 1] = {
-                            from: "system",
-                            text: accumulated,
-                            streaming: true
-                        };
-                    } else {
-                        updated.push({
-                            from: "system",
-                            text: accumulated,
-                            streaming: true
-                        });
+                    // Auto-send the repoUrl
+                    if (repoUrl) {
+                        setMessages((prev) => [...prev, {
+                            from: "user",
+                            text: repoUrl
+                        }]);
+                        socketRef.current?.send(JSON.stringify({ type: "input", data: repoUrl }));
+                        setTyping(true);
+                        setWaitingForInput(false);
                     }
-                    return updated;
-                });
+
+                    return;
+                }
+                setMessages((prev) => [...prev, {
+                    from: "system",
+                    text: message.data.prompt
+                }]);
+                setWaitingForInput(true); // Stop further output until user responds
+                return;
             }
 
-            if (message.type === "end") {
-                // Finalize last message by removing streaming flag
-                setMessages((prev) => {
-                    const updated = [...prev];
-                    if (updated.length && updated[updated.length - 1].streaming) {
-                        updated[updated.length - 1].streaming = false;
-                    }
-                    return updated;
-                });
-                setTyping(false);
+            if (waitingForInput) return; // pause output until input is sent
+
+            if ((message.type === "output" || message.type === "stderr") && message.data) {
+                const data = message.data.trim();
+                lastOutputBuffer += data + " ";
+
+                const normalized = lastOutputBuffer.toLowerCase();
+                if (
+                    !normalized.includes("please enter comma-separated") &&
+                    !normalized.includes("file names that are not deployable")
+                ) {
+                    setMessages((prev) => [...prev, {
+                        from: "system",
+                        text: data
+                    }]);
+                    lastOutputBuffer = "";
+                }
             }
         };
 
         socket.onerror = (err) => console.error("WebSocket error:", err);
+        return () => socket.close();
+    }, [waitingForInput]);
 
-        return () => {
-            socket.close();
-        };
-    }, []);
-
-    // Auto-scroll on new message
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
@@ -90,11 +107,11 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
         setInput("");
         setTyping(true);
+        setWaitingForInput(false);
     };
 
     return (
         <div className={`text-white w-full border border-[#232323] bg-[#0C0C0C] rounded-lg ${minimized ? "h-auto" : "flex flex-col flex-1 min-h-0"}`}>
-            {/* Header */}
             <div className="flex justify-between items-center px-4 py-2 bg-[#141414] rounded-t-lg">
                 <div className="flex items-center space-x-2">
                     <p className="font-semibold">{title}</p>
@@ -105,7 +122,6 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
                 </button>
             </div>
 
-            {/* Chat area */}
             {!minimized && (
                 <div className="flex flex-col flex-1 px-4 py-4 min-h-0">
                     <div className="flex-1 overflow-y-auto space-y-2 pr-2">
@@ -124,7 +140,6 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
                     <div className="flex items-center gap-2 mt-4">
                         <input
                             type="text"
