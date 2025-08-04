@@ -8,17 +8,12 @@ const socketUrl = "ws://localhost:8000/ws/test-123";
 export default function Hypothesis({ id, title, onMinimize, minimized }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
-    const [typing, setTyping] = useState(false);
     const [waitingForInput, setWaitingForInput] = useState(false);
 
     const messagesEndRef = useRef(null);
     const socketRef = useRef(null);
     const searchParams = useSearchParams();
     const repoUrl = searchParams.get("repoUrl");
-
-    const shouldSkipLine = (line) => {
-        return line?.includes("Please enter a GitHub URL") || line?.includes("=======");
-    };
 
     // Trigger MAS run on mount
     useEffect(() => {
@@ -30,6 +25,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         });
     }, [repoUrl]);
 
+    // WebSocket setup
     useEffect(() => {
         const socket = new WebSocket(socketUrl);
         socketRef.current = socket;
@@ -38,75 +34,38 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
             console.log("WebSocket connected");
         };
 
-        let lastOutputBuffer = "";
-
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
-            if (shouldSkipLine(message.data)) return;
+            if (!message?.type || !message?.data) return;
+
+            let text = "";
 
             if (message.type === "prompt") {
-                if (promptText.includes("Please enter a GitHub URL")) {
-                    setMessages((prev) => [...prev, {
-                        from: "system",
-                        text: promptText
-                    }]);
-
-                    // Auto-send the repoUrl
-                    if (repoUrl) {
-                        setMessages((prev) => [...prev, {
-                            from: "user",
-                            text: repoUrl
-                        }]);
-                        socketRef.current?.send(JSON.stringify({ type: "input", data: repoUrl }));
-                        setTyping(true);
-                        setWaitingForInput(false);
-                    }
-
-                    return;
-                }
-                setMessages((prev) => [...prev, {
-                    from: "system",
-                    text: message.data.prompt
-                }]);
-                setWaitingForInput(true); // Stop further output until user responds
-                return;
+                text = message.data.prompt || "";
+                setWaitingForInput(true);
+            } else if (message.type === "output" || message.type === "stderr") {
+                text = typeof message.data === "string" ? message.data.trim() : "";
             }
 
-            if (waitingForInput) return; // pause output until input is sent
-
-            if ((message.type === "output" || message.type === "stderr") && message.data) {
-                const data = message.data.trim();
-                lastOutputBuffer += data + " ";
-
-                const normalized = lastOutputBuffer.toLowerCase();
-                if (
-                    !normalized.includes("please enter comma-separated") &&
-                    !normalized.includes("file names that are not deployable")
-                ) {
-                    setMessages((prev) => [...prev, {
-                        from: "system",
-                        text: data
-                    }]);
-                    lastOutputBuffer = "";
-                }
+            if (text) {
+                setMessages((prev) => [...prev, { from: "system", text }]);
             }
         };
 
         socket.onerror = (err) => console.error("WebSocket error:", err);
         return () => socket.close();
-    }, [waitingForInput]);
+    }, []);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
     const handleSend = () => {
-        if (!input.trim()) return;
+        if (!input.trim() || !waitingForInput) return;
 
-        setMessages(prev => [...prev, { from: "user", text: input }]);
+        setMessages((prev) => [...prev, { from: "user", text: input }]);
         socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
         setInput("");
-        setTyping(true);
         setWaitingForInput(false);
     };
 
@@ -132,11 +91,6 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
                                 </div>
                             </div>
                         ))}
-                        {typing && (
-                            <div className="flex justify-start">
-                                <div className="px-4 py-2 rounded-lg text-sm bg-[#141414] text-gray-400 italic animate-pulse">...</div>
-                            </div>
-                        )}
                         <div ref={messagesEndRef} />
                     </div>
 
@@ -148,10 +102,12 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleSend()}
                             className="flex-1 bg-[#141414] border border-[#232323] rounded-md px-4 py-2 text-sm text-gray-300 placeholder:text-gray-500"
+                            disabled={!waitingForInput}
                         />
                         <button
                             onClick={handleSend}
-                            className="bg-[#df153e] px-3 py-2 rounded-md text-white text-sm"
+                            className={`px-3 py-2 rounded-md text-white text-sm ${waitingForInput ? "bg-[#df153e]" : "bg-gray-500 cursor-not-allowed"}`}
+                            disabled={!waitingForInput}
                         >
                             Send
                         </button>
