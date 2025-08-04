@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/runs/:path*",
+      "destination": "https://shepherd-mas.fly.dev/runs/:path*"
+    },
+    {
+      "source": "/ws/:path*",
+      "destination": "https://shepherd-mas.fly.dev/ws/:path*"
+    }
+  ]
+}
