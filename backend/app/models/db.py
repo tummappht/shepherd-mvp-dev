@@ -7,6 +7,7 @@ from typing import Optional, List
 from datetime import datetime
 import uuid
 
+
 load_dotenv()
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
@@ -148,6 +149,7 @@ def delete_repository_analysis(run_id: str) -> bool:
         return False
 
 # Legacy functions (keeping for backward compatibility)
+# Optional: Helper functions to insert/fetch jobs/logs
 def insert_job(job: dict):
     """
     Save a new job to Supabase 'job_requests' table
