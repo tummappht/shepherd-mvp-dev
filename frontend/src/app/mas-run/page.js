@@ -1,13 +1,16 @@
 "use client";
 import Diagram from "@/components/Diagram";
 import HypothesisManager from "@/components/HypothesisManager";
+import { Suspense } from "react";
 
 export default function MasRun() {
     return (
         <div className="bg-black h-[calc(100vh-5rem)] w-full flex flex-row items-start justify-center space-x-8 py-8 px-24">
             {/* Hypothesis Section */}
             <div className="h-full w-full max-w-3xl flex flex-col">
-                <HypothesisManager />
+                <Suspense fallback={<div>Loading hypotheses...</div>}>
+                    <HypothesisManager />
+                </Suspense>
             </div>
 
             {/* Diagram Section */}
