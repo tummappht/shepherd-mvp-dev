@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { FaEdit, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 
-const socketUrl = "wss://shepherd-mas.fly.dev/ws/test-123";
+const socketUrl = "wss://shepherd-mvp.vercel.app/ws/test-123";
 
 export default function Hypothesis({ id, title, onMinimize, minimized }) {
     const [messages, setMessages] = useState([]);
@@ -18,7 +18,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     // Trigger MAS run on mount
     useEffect(() => {
         if (!repoUrl) return;
-        fetch("https://shepherd-mas.fly.dev/runs/test-123", {
+        fetch("/runs/test-123", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ github_url: repoUrl }),
