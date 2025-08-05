@@ -23,7 +23,7 @@ export default function Repositories() {
                             height={20}
                             alt="DeFiHackLabs"
                         />
-                        <p className="text-sm">{repo.name}</p>
+                        <p className="text-sm text-white">{repo.name}</p>
                     </div>
                     <Image
                         src="/images/arrow.png"
