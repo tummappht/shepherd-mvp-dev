@@ -1,95 +1,170 @@
-// src/components/Diagram.jsx
-"use client";
-import CytoscapeComponent from "react-cytoscapejs";
-import cytoscape from "cytoscape";
-import dagre from "cytoscape-dagre";
+'use client';
 
-cytoscape.use(dagre);
-
+import { useEffect, useRef } from 'react';
+import cytoscape from 'cytoscape';
 
 export default function Diagram() {
-    const elements = [
-        { data: { id: 'planner', label: 'Planner', group: 'main' } },
-        { data: { id: 'executor', label: 'Executor', group: 'quant' } },
-        { data: { id: 'reflector', label: 'Reflector', group: 'scout' } },
-        { data: { id: 'reporter', label: 'Reporter', group: 'scout-highlight' } },
+    const cyRef = useRef(null);
 
-        { data: { source: 'planner', target: 'executor' } },
-        { data: { source: 'executor', target: 'reflector' } },
-        { data: { source: 'reflector', target: 'reporter' } },
-    ];
+    useEffect(() => {
+        const cy = cytoscape({
+        container: cyRef.current,
+        style: [
+            {
+            selector: 'node',
+            style: {
+                shape: 'roundrectangle',
+                'background-color': '#1e293b',
+                'label': 'data(label)',
+                'text-valign': 'center',
+                'text-halign': 'center',
+                'color': '#f8fafc',
+                'text-wrap': 'wrap',
+                'text-max-width': 120,
+                'font-size': 14,
+                'text-outline-width': 1,
+                'text-outline-color': '#1e293b',
+                'padding': '12px',
+                'width': 'label',
+                'height': 'label',
+                'border-width': 1,
+                'border-color': '#38bdf8',
+                'transition-property': 'opacity',
+                'transition-duration': '0.8s',
+                'opacity': 1,
+            }
+            },
+            {
+            selector: 'node.hidden',
+            style: {
+                'opacity': 0,
+            }
+            },
+            {
+            selector: 'edge',
+            style: {
+                width: 2,
+                'line-color': '#94a3b8',
+                'target-arrow-color': '#94a3b8',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier',
+                'source-endpoint': 'outside-to-node',
+                'target-endpoint': 'outside-to-node'
+            }
+            },
+            {
+            selector: 'edge.highlighted',
+            style: {
+                'line-color': '#f43f5e',
+                'target-arrow-color': '#f43f5e',
+                'width': 4
+            }
+            }
+        ],
+        elements: [],
+        layout: {
+            name: 'preset'
+        }
+        });
+
+        // Manual positions for each node
+        const nodePositions = {
+        attacker: { x: 100, y: 300 },
+        tool: { x: 100, y: 100 },
+        basicForwarder: { x: 500, y: 150 },
+        multicall: { x: 300, y: 300 },
+        naiveReceiverPool: { x: 250, y: 450 },
+        flashLoanReceiver: { x: 500, y: 500 }
+        };
+
+        const nodesWithParents = [
+        {
+            node: {
+            id: 'attacker',
+            label: 'Attacker\n(Origin)',
+            position: nodePositions.attacker
+            }
+        },
+        {
+            node: {
+            id: 'tool',
+            label: 'Tool\nExecutor',
+            position: nodePositions.tool
+            },
+            edge: { id: 'e1', source: 'attacker', target: 'tool', label: 'Calculate pool + receiver funds' }
+        },
+        {
+            node: {
+            id: 'basicForwarder',
+            label: 'BasicForwarder',
+            position: nodePositions.basicForwarder
+            },
+            edge: { id: 'e2', source: 'tool', target: 'basicForwarder' }
+        },
+        {
+            node: {
+            id: 'multicall',
+            label: 'Multicall',
+            position: nodePositions.multicall
+            },
+            edge: { id: 'e4', source: 'tool', target: 'multicall' }
+        },
+        {
+            node: {
+            id: 'naiveReceiverPool',
+            label: 'NaiveReceiverPool',
+            position: nodePositions.naiveReceiverPool
+            },
+            edge: { id: 'e5', source: 'tool', target: 'naiveReceiverPool' }
+        },
+        {
+            node: {
+            id: 'flashLoanReceiver',
+            label: 'FlashLoanReceiver',
+            position: nodePositions.flashLoanReceiver
+            },
+            edge: { id: 'e3', source: 'naiveReceiverPool', target: 'flashLoanReceiver' }
+        }
+        ];
+
+        const delay = 3600;
+
+        nodesWithParents.forEach(({ node, edge }, i) => {
+        // Add node with preset position, initially hidden
+        cy.add({
+            data: { id: node.id, label: node.label },
+            position: node.position,
+            classes: 'hidden'
+        });
+
+        setTimeout(() => {
+            // Reveal node
+            const n = cy.getElementById(node.id);
+            n.removeClass('hidden');
+
+            // Add edge if it exists
+            if (edge) {
+            cy.add({ data: edge });
+            }
+        }, delay * i);
+        });
+        /*
+        // Edge hover effect
+        cy.on('mouseover', 'edge', (evt) => {
+        evt.target.addClass('highlighted');
+        });
+        cy.on('mouseout', 'edge', (evt) => {
+        evt.target.removeClass('highlighted');
+        });
+        */
+
+        return () => cy.destroy();
+    }, []);
 
     return (
-        <div style={{ width: "100%", height: "600px", background: "#0b0b0b" }}>
-            <CytoscapeComponent
-                elements={elements}
-                style={{ width: "100%", height: "100%" }}
-                layout={{ name: 'dagre' }}
-                stylesheet={[
-                    {
-                        selector: 'node',
-                        style: {
-                            'label': 'data(label)',
-                            'text-wrap': 'wrap',
-                            'text-max-width': 100,
-                            'font-size': '12px',
-                            'text-valign': 'center',
-                            'text-halign': 'center',
-                            'shape': 'roundrectangle',
-                            'padding': '10px',
-                            'width': 'label',
-                            'height': 'label',
-                            'color': '#fff',
-                            'background-color': '#222',
-                            'border-width': 2,
-                            'border-color': '#444',
-                            'box-shadow': '0 0 6px #000',
-                        }
-                    },
-                    {
-                        selector: 'node[group="main"]',
-                        style: {
-                            'background-color': '#4a4a8a',
-                            'border-color': '#6f6fdd',
-                            'box-shadow': '0 0 10px #6f6fdd',
-                        }
-                    },
-                    {
-                        selector: 'node[group="quant"]',
-                        style: {
-                            'background-color': '#b2852f',
-                            'border-color': '#ffc04d',
-                            'box-shadow': '0 0 10px #ffc04d',
-                        }
-                    },
-                    {
-                        selector: 'node[group="scout"]',
-                        style: {
-                            'background-color': '#2f6a8a',
-                            'border-color': '#4dbfff',
-                            'box-shadow': '0 0 10px #4dbfff',
-                        }
-                    },
-                    {
-                        selector: 'node[group="scout-highlight"]',
-                        style: {
-                            'background-color': '#20b2aa',
-                            'border-color': '#7fffd4',
-                            'box-shadow': '0 0 10px #7fffd4',
-                        }
-                    },
-                    {
-                        selector: 'edge',
-                        style: {
-                            'width': 2,
-                            'line-color': '#888',
-                            'target-arrow-color': '#888',
-                            'target-arrow-shape': 'triangle',
-                            'curve-style': 'bezier',
-                        }
-                    }
-                ]}
-            />
-        </div>
+        <div
+        className="w-full h-[600px] bg-[#0C0C0C] bg-[radial-gradient(circle,_#1e293b_1px,_transparent_1px)] [background-size:20px_20px] rounded-lg shadow-md"
+        ref={cyRef}
+        ></div>
     );
 }

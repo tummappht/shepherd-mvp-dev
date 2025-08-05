@@ -30,7 +30,7 @@ export default function References({ clicked, setClicked }) {
                             height={20}
                             alt="File"
                         />
-                        <p className="text-sm">{reference.name}</p>
+                        <p className="text-sm text-white">{reference.name}</p>
                     </div>
                     <Image
                         src="/images/arrow.png"
