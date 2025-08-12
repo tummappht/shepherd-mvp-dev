@@ -1,167 +1,162 @@
-# Supabase client and db helper functions
-
-from supabase import create_client, Client
+# models/db.py
 import os
-from dotenv import load_dotenv
-from typing import Optional, List
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 import uuid
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
 load_dotenv()
 
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+# Initialize Supabase client
+# SUPABASE_URL = os.getenv("SUPABASE_URL")
+# SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = "https://yxspjssdqbswsgotraag.supabase.co/"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4c3Bqc3NkcWJzd3Nnb3RyYWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2OTczMTksImV4cCI6MjA2OTI3MzMxOX0.X0U6d6klPowS7lt7eYdD35X8HPH2T-RJrhg7hsRGcfw"
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("Missing Supabase credentials in environment variables")
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Database helper functions for repository analysis requests
 def create_repository_analysis(
     repository_url: str,
     project_description: str,
-    environment: str,  # "local" or "testnet"
+    environment: str,
     user_id: Optional[str] = None,
     reference_files: Optional[List[str]] = None
-) -> dict:
+) -> Dict[str, Any]:
     """
-    Create a new repository analysis request in Supabase
-    
-    Args:
-        repository_url: GitHub repository URL
-        project_description: Project documentation/description
-        environment: "local" or "testnet"
-        user_id: Optional user ID for tracking
-        reference_files: Optional list of file paths/names
-    
-    Returns:
-        dict: Created record with ID and timestamps
+    Create a new repository analysis record in Supabase
     """
+    run_id = str(uuid.uuid4())
+    
+    data = {
+        "run_id": run_id,
+        "repository_url": repository_url,
+        "project_description": project_description,
+        "environment": environment,
+        "user_id": user_id or "@0xps",  # Default user
+        "reference_files": reference_files or [],
+        "status": "pending",  # Initial status
+        "created_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
     try:
-        # Generate a unique run_id
-        run_id = str(uuid.uuid4())
-        
-        # Prepare the data
-        analysis_data = {
-            "run_id": run_id,
-            "repository_url": repository_url,
-            "project_description": project_description,
-            "environment": environment,
-            "status": "pending",  # pending, running, completed, failed
-            "user_id": user_id,
-            "reference_files": reference_files or [],
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat()
-        }
-        
-        # Insert into Supabase with RLS bypass for testing
-        result = supabase.table("repository_analyses").insert(analysis_data).execute()
-        
-        if result.data:
-            return result.data[0]
-        else:
-            raise Exception("Failed to create repository analysis")
-            
+        response = supabase.table("repository_analyses").insert(data).execute()
+        return response.data[0] if response.data else data
     except Exception as e:
         print(f"Error creating repository analysis: {e}")
-        raise
+        # Return the data anyway for local development
+        return data
 
-def get_repository_analysis(run_id: str) -> Optional[dict]:
+def get_repository_analysis(run_id: str) -> Optional[Dict[str, Any]]:
     """
     Get a repository analysis by run_id
-    
-    Args:
-        run_id: Unique identifier for the analysis
-    
-    Returns:
-        dict: Analysis record or None if not found
     """
     try:
-        result = supabase.table("repository_analyses").select("*").eq("run_id", run_id).execute()
-        
-        if result.data:
-            return result.data[0]
-        return None
-        
+        response = supabase.table("repository_analyses").select("*").eq("run_id", run_id).execute()
+        return response.data[0] if response.data else None
     except Exception as e:
         print(f"Error fetching repository analysis: {e}")
         return None
 
-def update_analysis_status(run_id: str, status: str, additional_data: Optional[dict] = None):
+def update_analysis_status(
+    run_id: str, 
+    status: str, 
+    additional_data: Optional[Dict[str, Any]] = None
+) -> bool:
     """
     Update the status of a repository analysis
     
-    Args:
-        run_id: Unique identifier for the analysis
-        status: New status (pending, running, completed, failed)
-        additional_data: Optional additional data to update
+    Status can be: pending, queued, running, completed, failed, cancelled
     """
+    update_data = {
+        "status": status,
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
+    # Add status-specific fields
+    if status == "running":
+        update_data["started_at"] = datetime.utcnow().isoformat()
+    elif status == "completed":
+        update_data["completed_at"] = datetime.utcnow().isoformat()
+    elif status == "failed" and additional_data:
+        update_data["error"] = additional_data.get("error", "Unknown error")
+        update_data["failed_at"] = datetime.utcnow().isoformat()
+    elif status == "queued" and additional_data:
+        update_data["queue_position"] = additional_data.get("queue_position", 0)
+        update_data["estimated_wait"] = additional_data.get("estimated_wait", 0)
+    
+    # Merge any additional data
+    if additional_data:
+        update_data.update(additional_data)
+    
     try:
-        update_data = {
-            "status": status,
-            "updated_at": datetime.utcnow().isoformat()
-        }
-        
-        if additional_data:
-            update_data.update(additional_data)
-        
-        supabase.table("repository_analyses").update(update_data).eq("run_id", run_id).execute()
-        
+        response = supabase.table("repository_analyses").update(update_data).eq("run_id", run_id).execute()
+        return bool(response.data)
     except Exception as e:
-        print(f"Error updating analysis status: {e}")
-        raise
+        print(f"Error updating repository analysis status: {e}")
+        return False
 
-def list_user_analyses(user_id: str, limit: int = 50) -> List[dict]:
+def list_user_analyses(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
     """
-    Get all analyses for a specific user
-    
-    Args:
-        user_id: User identifier
-        limit: Maximum number of records to return
-    
-    Returns:
-        List[dict]: List of analysis records
+    List all repository analyses for a user
     """
     try:
-        result = supabase.table("repository_analyses").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
-        
-        return result.data or []
-        
+        response = (
+            supabase.table("repository_analyses")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return response.data if response.data else []
     except Exception as e:
-        print(f"Error fetching user analyses: {e}")
+        print(f"Error listing user analyses: {e}")
         return []
 
 def delete_repository_analysis(run_id: str) -> bool:
     """
-    Delete a repository analysis by run_id
-    
-    Args:
-        run_id: Unique identifier for the analysis
-    
-    Returns:
-        bool: True if deleted successfully, False otherwise
+    Delete a repository analysis
     """
     try:
-        result = supabase.table("repository_analyses").delete().eq("run_id", run_id).execute()
-        
-        return len(result.data) > 0
-        
+        response = supabase.table("repository_analyses").delete().eq("run_id", run_id).execute()
+        return bool(response.data)
     except Exception as e:
         print(f"Error deleting repository analysis: {e}")
         return False
 
-# Legacy functions (keeping for backward compatibility)
-def insert_job(job: dict):
+def get_queued_analyses() -> List[Dict[str, Any]]:
     """
-    Save a new job to Supabase 'job_requests' table
+    Get all analyses in queued status, ordered by creation time
     """
-    pass
+    try:
+        response = (
+            supabase.table("repository_analyses")
+            .select("*")
+            .eq("status", "queued")
+            .order("created_at", asc=True)
+            .execute()
+        )
+        return response.data if response.data else []
+    except Exception as e:
+        print(f"Error fetching queued analyses: {e}")
+        return []
 
-def update_job_status(run_id: str, status: str):
+def get_active_analyses() -> List[Dict[str, Any]]:
     """
-    Update the status of a job
+    Get all analyses currently running
     """
-    pass
-
-def save_log_line(log: dict):
-    """
-    Save MAS log lines to Supabase (optional, fallback if websocket not connected)
-    """
-    pass
+    try:
+        response = (
+            supabase.table("repository_analyses")
+            .select("*")
+            .eq("status", "running")
+            .execute()
+        )
+        return response.data if response.data else []
+    except Exception as e:
+        print(f"Error fetching active analyses: {e}")
+        return []

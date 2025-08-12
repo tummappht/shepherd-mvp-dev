@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration for MAS repository
-MAS_REPO_PATH = os.environ.get("MAS_REPO_PATH", "../mas")
+MAS_REPO_PATH = os.environ.get("MAS_REPO_PATH", "../blackRabbit")
 MAS_PYTHON_PATH = os.environ.get("MAS_PYTHON_PATH", "python")
 
 # Global state for tracking output patterns
