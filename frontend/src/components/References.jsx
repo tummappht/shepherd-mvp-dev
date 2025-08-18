@@ -20,8 +20,8 @@ export default function References({ clicked, setClicked }) {
                     <div className="flex flex-row space-x-2 items-center">
                         <Image
                             src="/images/defi.png"
-                            width={40}
-                            height={40}
+                            width={20}
+                            height={20}
                             alt="DeFiHackLabs"
                         />
                         <Image
