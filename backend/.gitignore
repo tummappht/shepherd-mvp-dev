@@ -39,3 +39,9 @@ Thumbs.db
 # ---- Misc ----
 *.bak
 *.tmp
+
+/test_logs
+/backend/test_logs
+/logs
+
+/myenv

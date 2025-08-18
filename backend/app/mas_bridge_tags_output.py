@@ -1,7 +1,8 @@
-#deployment ver 
+#deployment ver - complete with tag parsing and error handling
 import asyncio
 import os
 import re
+import json
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Callable
@@ -13,17 +14,138 @@ load_dotenv()
 MAS_REPO_PATH = os.environ.get("MAS_REPO_PATH", "../blackRabbit")
 MAS_PYTHON_PATH = os.environ.get("MAS_PYTHON_PATH", "python")
 
-# Global state for tracking output patterns
-class PromptDetector:
+class TagParser:
+    """Parser for MAS structured output tags"""
+    
+    # Define tag patterns
+    TAG_PATTERNS = {
+        'EXECUTOR_TOOL_CALL': r'<<<EXECUTOR_TOOL_CALL>>>(.*?)<<<END_EXECUTOR_TOOL_CALL>>>',
+        'EXECUTOR_TOOL_RESULT': r'<<<EXECUTOR_TOOL_RESULT>>>(.*?)<<<END_EXECUTOR_TOOL_RESULT>>>',
+        'AGENT': r'<<<AGENT>>>(.*?)<<<END_AGENT>>>',
+        'USER_INPUT': r'<<<USER_INPUT>>>(.*?)<<<END_USER_INPUT>>>',
+        'SYSTEM': r'<<<SYSTEM>>>(.*?)<<<END_SYSTEM>>>',
+        'ERROR': r'<<<ERROR>>>(.*?)<<<END_ERROR>>>',
+        'PLANNER': r'<<<PLANNER>>>(.*?)<<<END_PLANNER>>>',
+        'EXECUTOR': r'<<<EXECUTOR>>>(.*?)<<<END_EXECUTOR>>>',
+        'VALIDATOR': r'<<<VALIDATOR>>>(.*?)<<<END_VALIDATOR>>>',
+        'SUMMARY': r'<<<SUMMARY>>>(.*?)<<<END_SUMMARY>>>',
+    }
+    
     def __init__(self):
-        self.recent_lines = []  # Keep track of recent output
+        self.buffer = ""
+        self.current_tag = None
+        self.tag_content = ""
+        self.non_tag_buffer = ""  # Buffer for non-tagged content
+        
+    def process_chunk(self, chunk: str):
+        """
+        Process a chunk of text and extract complete tags
+        Returns tuple of (parsed_tags, regular_output)
+        """
+        self.buffer += chunk
+        results = []
+        regular_output = ""
+        
+        # Keep processing buffer while we find complete tags
+        while True:
+            # If we're currently in a tag, look for its end
+            if self.current_tag:
+                end_pattern = f'<<<END_{self.current_tag}>>>'
+                end_pos = self.buffer.find(end_pattern)
+                
+                if end_pos != -1:
+                    # Found end of current tag
+                    content = self.buffer[:end_pos]
+                    self.tag_content += content
+                    
+                    # Parse the complete tag content
+                    parsed = self._parse_tag_content(self.current_tag, self.tag_content)
+                    if parsed:
+                        results.append(parsed)
+                    
+                    # Move buffer past the end tag
+                    self.buffer = self.buffer[end_pos + len(end_pattern):]
+                    self.current_tag = None
+                    self.tag_content = ""
+                else:
+                    # Still waiting for end tag, accumulate content
+                    self.tag_content += self.buffer
+                    self.buffer = ""
+                    break
+            else:
+                # Look for start of any tag
+                earliest_pos = len(self.buffer)
+                found_tag = None
+                
+                for tag_name in self.TAG_PATTERNS.keys():
+                    start_pattern = f'<<<{tag_name}>>>'
+                    pos = self.buffer.find(start_pattern)
+                    if pos != -1 and pos < earliest_pos:
+                        earliest_pos = pos
+                        found_tag = tag_name
+                
+                if found_tag:
+                    # Store any content before the tag as regular output
+                    before_tag = self.buffer[:earliest_pos]
+                    if before_tag:
+                        regular_output += before_tag
+                    
+                    # Start processing the found tag
+                    self.buffer = self.buffer[earliest_pos + len(f'<<<{found_tag}>>>'):]
+                    self.current_tag = found_tag
+                    self.tag_content = ""
+                else:
+                    # No tags found, return buffer as regular output
+                    regular_output += self.buffer
+                    self.buffer = ""
+                    break
+        
+        return results, regular_output
+    
+    def _parse_tag_content(self, tag_type: str, content: str):
+        """Parse the content based on tag type"""
+        try:
+            # Try to parse as JSON
+            content = content.strip()
+            if content.startswith('{') and content.endswith('}'):
+                data = json.loads(content)
+            else:
+                data = {"content": content}
+            
+            return {
+                "type": tag_type.lower().replace('_', '-'),  # Convert to kebab-case for WebSocket
+                "data": data,
+                "tag_type": tag_type
+            }
+        except json.JSONDecodeError:
+            # If not valid JSON, return as raw content
+            return {
+                "type": tag_type.lower().replace('_', '-'),
+                "data": {"content": content},
+                "tag_type": tag_type
+            }
+    
+    def flush(self):
+        """Return any incomplete tag data (for debugging)"""
+        if self.current_tag and self.tag_content:
+            return {
+                "type": "incomplete-tag",
+                "data": {
+                    "tag": self.current_tag,
+                    "partial_content": self.tag_content
+                }
+            }
+        return None
+
+class PromptDetector:
+    """Legacy prompt detector for fallback cases"""
+    def __init__(self):
+        self.recent_lines = []
         self.max_history = 10
+        self.seen_prompts = set()
         self.last_input_time = 0
-        self.pending_prompt = None
-        self.seen_prompts = set()  # Remember prompts we've seen
         self.waiting_for_multiline = False
         self.multiline_empty_count = 0
-        self.detected_prompts = set()  # Track prompts we've detected for filtering
         
     def add_line(self, line: str):
         """Add a line to history"""
@@ -71,7 +193,7 @@ class PromptDetector:
     
     def is_likely_prompt(self, line: str) -> bool:
         """Check if this line is likely a prompt for user input"""
-        if not line or len(line) > 300:  # Increased limit for longer prompts
+        if not line or len(line) > 300:
             return False
         
         line_lower = line.lower().strip()
@@ -92,12 +214,12 @@ class PromptDetector:
         if line_stripped in self.seen_prompts:
             return False
         
-        # Look for specific MAS prompts (your custom prompts)
+        # Look for specific MAS prompts
         mas_prompt_patterns = [
-            r'Enter the contract name.*:$',  # Your contract name prompt
-            r'Enter the specific function.*:$',  # Your function prompt
-            r'Enter hypothesis.*:$',  # Your hypothesis prompt
-            r'Enter your detailed vulnerability hypothesis.*:$',  # Your detailed prompt
+            r'Enter the contract name.*:$',
+            r'Enter the specific function.*:$',
+            r'Enter hypothesis.*:$',
+            r'Enter your detailed vulnerability hypothesis.*:$',
             r'▶️\s*Run another MAS\?.*:$', 
             r'Run another MAS\?.*:$',  
             r'\(y/N\):?\s*$',  
@@ -133,13 +255,12 @@ class PromptDetector:
         for pattern in question_patterns:
             if re.match(pattern, line_stripped, re.IGNORECASE):
                 # Additional validation
-                # Make sure it's not just a colon after numbers or progress
                 if line_stripped.endswith(':'):
                     text_before = line_stripped[:-1].strip()
                     # Avoid matching "Step 1:" or "100%:" etc
                     if re.match(r'^(Step\s+)?\d+$', text_before) or re.match(r'^\d+%$', text_before):
                         return False
-                    # But DO match prompts with parentheses like "Enter the contract name (e.g., Vault, BuyPurpose):"
+                    # But DO match prompts with parentheses
                     if "enter" in text_before.lower() or "input" in text_before.lower():
                         return True
                 return True
@@ -152,7 +273,6 @@ class PromptDetector:
             return False
         
         # Special case: Check if the recent output contains setup/header text
-        # that typically precedes prompts
         setup_indicators = [
             "ANALYSIS SETUP",
             "VULNERABILITY HYPOTHESIS",
@@ -165,7 +285,7 @@ class PromptDetector:
             for line in self.recent_lines[-5:]
         )
         
-        # Special case: Check for hypothesis instructions that indicate silent input wait
+        # Special case: Check for hypothesis instructions
         hypothesis_indicators = [
             "Enter hypothesis (press Enter twice when done):",
             "Enter your detailed vulnerability hypothesis",
@@ -176,18 +296,15 @@ class PromptDetector:
         for line in self.recent_lines[-3:]:
             for indicator in hypothesis_indicators:
                 if indicator in line:
-                    # MAS is now silently waiting for hypothesis input
                     return True
         
         # If we haven't seen output for a bit and the line looks like a prompt
         if time_since_last_char > 0.3 and self.is_likely_prompt(current_line):
-            # If we have setup context, be more aggressive about detecting prompts
             if has_setup_context:
                 return True
                 
             # Otherwise use normal detection
             if len(self.recent_lines) >= 2:
-                # If the last few lines were all progress, this probably isn't a real prompt
                 recent_progress_count = sum(1 for line in self.recent_lines[-3:] 
                                           if self.is_progress_output(line))
                 if recent_progress_count >= 2:
@@ -196,41 +313,142 @@ class PromptDetector:
         
         return False
 
-# Add this class before launch_mas_interactive
-class OutputBuffer:
-    """Smart buffer that holds back potential prompts"""
-    def __init__(self, ws_manager, run_id, detector):
+class TagAwareOutputBuffer:
+    """Buffer that ONLY streams tagged content, ignoring regular output"""
+    
+    def __init__(self, ws_manager, run_id):
         self.ws_manager = ws_manager
         self.run_id = run_id
-        self.detector = detector
+        self.parser = TagParser()
+        self.prompt_detector = PromptDetector()
         self.buffer = ""
-        self.hold_buffer = ""  # Buffer for holding potential prompts
-        self.last_newline_sent = True
+        self.hold_buffer = ""
+        self.error_state = False
+        self.seen_prompts = set()
         
+        # New: Track if we're currently inside a tag
+        self.inside_tag = False
+        self.current_tag_type = None
+        self.current_tag_content = ""
+        self.current_stream_id = None
+        self.stream_counter = 0
+        
+        # Track specific prompt handling
+        self.handling_run_another_mas = False
+        
+    async def add_chunk(self, chunk: str):
+        """Add a chunk of output and process ONLY tags"""
+        self.buffer += chunk
+        
+        # Check for error state
+        if "GRAPH_RECURSION_LIMIT" in chunk:
+            self.error_state = True
+        
+        # Process chunk through tag parser
+        tags, regular_output = self.parser.process_chunk(chunk)
+        
+        # MODIFIED: Don't send regular output at all
+        # Only check if regular output contains prompts
+        if regular_output:
+            if self.check_for_prompt(regular_output):
+                self.hold_buffer = regular_output
+        
+        # Send each parsed tag via WebSocket with stream info
+        for tag_data in tags:
+            if self.ws_manager:
+                # Add stream metadata
+                self.stream_counter += 1
+                tag_data['stream_id'] = f"stream_{self.stream_counter}"
+                tag_data['stream_complete'] = True  # Since we got the complete tag
+                await self.ws_manager.send_log(self.run_id, tag_data)
+        
+        # Add lines to prompt detector for fallback
+        for line in chunk.split('\n'):
+            if line.strip():
+                self.prompt_detector.add_line(line.strip())
+    
     async def add_char(self, char: str):
-        """Add a character and manage buffering"""
+        """Character-by-character processing - only send when inside tags"""
         self.buffer += char
         
-        # Check if we're building the "Run another MAS?" prompt
-        if "Run another MAS?" in self.buffer or "▶️" in self.buffer:
-            # Don't send anything yet - we're building a prompt
+        # Check if we're entering a tag
+        for tag_name in TagParser.TAG_PATTERNS.keys():
+            start_pattern = f'<<<{tag_name}>>>'
+            if self.buffer.endswith(start_pattern):
+                self.inside_tag = True
+                self.current_tag_type = tag_name
+                self.current_tag_content = ""
+                self.stream_counter += 1
+                self.current_stream_id = f"stream_{self.stream_counter}"
+                
+                # Send stream start notification
+                if self.ws_manager:
+                    await self.ws_manager.send_log(self.run_id, {
+                        "type": "stream_start",
+                        "stream_id": self.current_stream_id,
+                        "tag_type": self.current_tag_type
+                    })
+                # Clear the tag marker from buffer
+                self.buffer = self.buffer[:-len(start_pattern)]
+                return
+        
+        # Check if we're exiting a tag
+        if self.inside_tag and self.current_tag_type:
+            end_pattern = f'<<<END_{self.current_tag_type}>>>'
+            if self.buffer.endswith(end_pattern):
+                # Remove the end pattern from buffer
+                content = self.buffer[:-len(end_pattern)]
+                
+                # Parse and send the complete tag content
+                parsed = self._parse_tag_content(self.current_tag_type, self.current_tag_content)
+                if parsed and self.ws_manager:
+                    parsed['stream_id'] = self.current_stream_id
+                    parsed['stream_complete'] = True
+                    await self.ws_manager.send_log(self.run_id, parsed)
+                
+                # Send stream end notification
+                if self.ws_manager:
+                    await self.ws_manager.send_log(self.run_id, {
+                        "type": "stream_end",
+                        "stream_id": self.current_stream_id,
+                        "tag_type": self.current_tag_type
+                    })
+                
+                # Reset tag tracking
+                self.inside_tag = False
+                self.current_tag_type = None
+                self.current_tag_content = ""
+                self.current_stream_id = None
+                self.buffer = ""
+                return
+            else:
+                # Accumulate content inside tag
+                self.current_tag_content += char
+                
+                # Optional: Stream partial content while inside tag
+                # Uncomment if you want real-time streaming within tags
+                # if self.ws_manager and char:
+                #     await self.ws_manager.send_log(self.run_id, {
+                #         "type": "stream_partial",
+                #         "stream_id": self.current_stream_id,
+                #         "tag_type": self.current_tag_type,
+                #         "data": char
+                #     })
+        
+        # Handle prompts (keep existing logic but don't send regular output)
+        if "Run another MAS?" in self.buffer or "â–¶ï¸" in self.buffer:
             if self.buffer.endswith(": "):
-                # Complete prompt detected, hold it
                 self.hold_buffer = self.buffer
                 self.buffer = ""
                 return
             elif self.buffer.endswith(":"):
-                # Might be incomplete, wait for space
                 return
             else:
-                # Still building the prompt, don't send yet
                 return
         
         if char == '\n':
-            # We have a complete line
             line = self.buffer.strip()
             
-            # Special check for hypothesis prompts
             hypothesis_patterns = [
                 "Enter hypothesis (press Enter twice when done):",
                 "Enter your detailed vulnerability hypothesis"
@@ -238,93 +456,104 @@ class OutputBuffer:
             
             is_hypothesis_prompt = any(pattern in line for pattern in hypothesis_patterns)
             
-            # Check if this line looks like a prompt (including hypothesis prompts)
-            if self.detector.is_likely_prompt(line) or is_hypothesis_prompt:
-                # Hold this line - don't send it yet
+            if self.prompt_detector.is_likely_prompt(line) or is_hypothesis_prompt:
                 self.hold_buffer = self.buffer
                 self.buffer = ""
                 return
             else:
-                # Not a prompt, send any held buffer first
-                if self.hold_buffer:
-                    await self._send(self.hold_buffer)
-                    self.hold_buffer = ""
-                
-                # Send current buffer
-                await self._send(self.buffer)
+                # MODIFIED: Don't send regular output, just clear buffer
+                self.hold_buffer = ""
                 self.buffer = ""
-                self.last_newline_sent = True
         else:
-            # Still building a line
-            self.last_newline_sent = False
-            
-            # If buffer is getting large and we have no held content, send it
-            # BUT NOT if it contains "Run another MAS?"
-            if (len(self.buffer) > 200 and 
-                not self.hold_buffer and 
-                "Run another MAS?" not in self.buffer):
-                await self._send(self.buffer)
+            # Clear buffer if it gets too large and we're not in a tag
+            if len(self.buffer) > 500 and not self.inside_tag:
                 self.buffer = ""
     
-    async def flush_if_not_prompt(self):
-        """Flush buffers if they don't contain prompts"""
-        if self.hold_buffer:
-            # We were holding a potential prompt
-            line = self.hold_buffer.strip()
+    def _parse_tag_content(self, tag_type: str, content: str):
+        """Parse the content based on tag type"""
+        try:
+            content = content.strip()
+            if content.startswith('{') and content.endswith('}'):
+                data = json.loads(content)
+            else:
+                data = {"content": content}
             
-            # Special check for hypothesis prompts
-            hypothesis_patterns = [
-                "Enter hypothesis (press Enter twice when done):",
-                "Enter your detailed vulnerability hypothesis"
-            ]
+            return {
+                "type": tag_type.lower().replace('_', '-'),
+                "data": data,
+                "tag_type": tag_type
+            }
+        except json.JSONDecodeError:
+            return {
+                "type": tag_type.lower().replace('_', '-'),
+                "data": {"content": content},
+                "tag_type": tag_type
+            }
+    
+    async def _send(self, data: str):
+        """MODIFIED: Don't send regular data, only used for debugging"""
+        # This method is now mostly disabled
+        pass
+    
+    def check_for_prompt(self, buffer: str) -> Optional[str]:
+        """Check if buffer contains a prompt that needs user input"""
+        # Special handling for "Run another MAS?" to prevent duplicates
+        if "Run another MAS?" in buffer and (buffer.strip().endswith(":") or "(y/N)" in buffer):
+            if self.handling_run_another_mas:
+                return None  # Already handling this specific prompt
+            return buffer.strip()
             
-            is_hypothesis_prompt = any(pattern in line for pattern in hypothesis_patterns)
-            
-            if not self.detector.is_likely_prompt(line) and not is_hypothesis_prompt:
-                # False alarm, send it
-                await self._send(self.hold_buffer)
-            self.hold_buffer = ""
-        
-        if self.buffer:
-            line = self.buffer.strip()
-            hypothesis_patterns = [
-                "Enter hypothesis (press Enter twice when done):",
-                "Enter your detailed vulnerability hypothesis"
-            ]
-            
-            is_hypothesis_prompt = any(pattern in line for pattern in hypothesis_patterns)
-            
-            if not self.detector.is_likely_prompt(line) and not is_hypothesis_prompt:
-                await self._send(self.buffer)
-                self.buffer = ""
+        if self.prompt_detector.is_likely_prompt(buffer.strip()):
+            return buffer.strip()
+        return None
     
     def clear_prompt(self):
         """Clear held prompt buffer when we confirm it's a prompt"""
         self.hold_buffer = ""
         self.buffer = ""
+        self.handling_run_another_mas = False
+    
+    async def flush_if_not_prompt(self):
+        """Modified: Only worry about prompts, not regular output"""
+        self.hold_buffer = ""
+        self.buffer = ""
     
     async def force_flush(self):
-        """Force send all buffers"""
-        if self.hold_buffer:
-            await self._send(self.hold_buffer)
-            self.hold_buffer = ""
-        if self.buffer:
-            await self._send(self.buffer)
-            self.buffer = ""
-    
-    async def _send(self, data: str):
-        """Send data via WebSocket"""
-        if data and self.ws_manager:
-            # Apply sensitive content filtering here
-            filtered_data = self._filter_sensitive_content(data)
-            if filtered_data:
+        """Modified: Check if we have incomplete tag data to send"""
+        if self.inside_tag and self.current_tag_content:
+            # Send incomplete tag warning
+            if self.ws_manager:
                 await self.ws_manager.send_log(self.run_id, {
-                    "type": "output",
-                    "data": filtered_data
+                    "type": "incomplete_tag",
+                    "stream_id": self.current_stream_id,
+                    "tag_type": self.current_tag_type,
+                    "partial_content": self.current_tag_content
                 })
+        self.hold_buffer = ""
+        self.buffer = ""
+    
+    def reset_for_new_mas(self):
+        """Reset state when user chooses to run another MAS"""
+        self.seen_prompts.clear()
+        self.error_state = False
+        self.prompt_detector.seen_prompts.clear()
+        self.inside_tag = False
+        self.current_tag_type = None
+        self.current_tag_content = ""
+        self.current_stream_id = None
+        self.handling_run_another_mas = False
+        
+    async def flush(self):
+        """Flush any remaining incomplete tags"""
+        await self.force_flush()
+        incomplete = self.parser.flush()
+        if incomplete and self.ws_manager:
+            incomplete['stream_id'] = f"stream_incomplete_{self.stream_counter + 1}"
+            await self.ws_manager.send_log(self.run_id, incomplete)
     
     def _filter_sensitive_content(self, text):
         """Filter out lines containing sensitive information"""
+        # Keep existing implementation but it won't be used for streaming
         FILTER_PATTERNS = [
             r'API_KEY:\s*[a-zA-Z0-9\-_]{20,}'
         ]
@@ -333,7 +562,6 @@ class OutputBuffer:
         filtered_lines = []
         
         for line in lines:
-            # Check if this line should be filtered
             should_filter = False
             for pattern in FILTER_PATTERNS:
                 if re.search(pattern, line, re.IGNORECASE):
@@ -343,10 +571,7 @@ class OutputBuffer:
             if not should_filter:
                 filtered_lines.append(line)
         
-        # Reconstruct the text, preserving newlines
         result = '\n'.join(filtered_lines)
-        
-        # Handle edge case where original text ended with newline
         if text.endswith('\n') and not result.endswith('\n'):
             result += '\n'
         
@@ -360,14 +585,9 @@ async def launch_mas_interactive(
     log_dir: str = "./backend/logs",
 ) -> Dict[str, Any]:
     """
-    Launch MAS subprocess with interactive input/output support via WebSocket
-    
-    Args:
-        run_id: Unique identifier for this run
-        job: Job configuration dictionary
-        input_handler: Async function that handles prompts and returns user input
-        ws_manager: WebSocket manager for sending logs
-        log_dir: Directory for log files
+    Launch MAS subprocess with tag-based streaming and error handling
+    This version uses character-by-character processing like mas_bridge_4.py
+    but also supports tag parsing
     """
     # Create log directory if it doesn't exist
     log_path = Path(log_dir)
@@ -389,7 +609,7 @@ async def launch_mas_interactive(
         if ws_manager:
             await ws_manager.send_log(run_id, {
                 "type": "error",
-                "data": error_msg
+                "data": {"error": error_msg}
             })
         return {"success": False, "error": error_msg}
     
@@ -397,7 +617,7 @@ async def launch_mas_interactive(
     env = os.environ.copy()
     env["PYTHONPATH"] = str(mas_repo / "src")
     
-    # Copy over API keys and other environment variables
+    # Copy over API keys
     optional_env_vars = [
         "OPENAI_API_KEY", "QDRANT_API_KEY", "QDRANT_URL", 
         "ETHERSCAN_API_KEY", "MONGO_URI", "WALLET_PRIVATE_KEY",
@@ -430,7 +650,6 @@ async def launch_mas_interactive(
                     "working_dir": str(mas_repo)
                 }
             })
-
         
         # Create subprocess
         process = await asyncio.create_subprocess_exec(
@@ -456,40 +675,11 @@ async def launch_mas_interactive(
                 }
             })
         
-        # Start a task to monitor stderr
-        async def monitor_stderr():
-            while True:
-                try:
-                    stderr_line = await process.stderr.readline()
-                    if not stderr_line:
-                        break
-                    stderr_text = stderr_line.decode('utf-8', errors='ignore')
-                    print(f"[STDERR] {stderr_text}", end='')
-                    
-                    # Log stderr to file
-                    with open(log_file_path.with_suffix('.stderr.log'), 'a') as stderr_log:
-                        stderr_log.write(stderr_text)
-                    
-                    # Send stderr via WebSocket
-                    if ws_manager:
-                        await ws_manager.send_log(run_id, {
-                            "type": "stderr",
-                            "data": stderr_text
-                        })
-                except Exception as e:
-                    print(f"[STDERR MONITOR ERROR] {e}")
-                    break
+        # Initialize output buffer with tag support
+        output_buffer = TagAwareOutputBuffer(ws_manager, run_id)
+        detector = output_buffer.prompt_detector
         
-        # Start stderr monitoring in background
-        stderr_task = asyncio.create_task(monitor_stderr())
-        
-        # Initialize prompt detector
-        detector = PromptDetector()
-        
-        # Initialize the smart output buffer
-        output_buffer = OutputBuffer(ws_manager, run_id, detector)
-        
-        # Open log file
+        # Main output processing loop (character by character like mas_bridge_4.py)
         with open(log_file_path, 'w', encoding='utf-8') as log_file:
             buffer = ""
             line_buffer = ""
@@ -497,11 +687,12 @@ async def launch_mas_interactive(
             last_char_time = asyncio.get_event_loop().time()
             no_output_count = 0
             error_state = False
+            
             while True:
                 # Read one byte at a time for better control
                 try:
                     data = await asyncio.wait_for(process.stdout.read(1), timeout=0.1)
-                    no_output_count = 0  # Reset when we get data
+                    no_output_count = 0
                 except asyncio.TimeoutError:
                     no_output_count += 1
                     
@@ -509,12 +700,10 @@ async def launch_mas_interactive(
                     await output_buffer.flush_if_not_prompt()
                     
                     current_buffer = buffer.strip()
-                    
-                    # Check both buffer and recent output
                     recent_output = "".join(all_output[-100:]) if all_output else ""
                     
+                    # Check for "Run another MAS?" prompt
                     if "Run another MAS?" in recent_output and recent_output.rstrip().endswith(":"):
-                        # Extract just the prompt part
                         lines = recent_output.split('\n')
                         for line in reversed(lines):
                             if "Run another MAS?" in line:
@@ -523,15 +712,13 @@ async def launch_mas_interactive(
                         else:
                             prompt_line = current_buffer
                         
-                        # Skip if already seen this exact prompt
                         if prompt_line and prompt_line not in detector.seen_prompts:
-                            # Clear the prompt from our output buffer
+                            if "Run another MAS?" in prompt_line:
+                                output_buffer.handling_run_another_mas = True  # Only set for this specific prompt
+
                             output_buffer.clear_prompt()
-                            
-                            # Mark this prompt as seen
                             detector.seen_prompts.add(prompt_line)
                             
-                            # Send prompt notification via WebSocket
                             if ws_manager:
                                 await ws_manager.send_log(run_id, {
                                     "type": "prompt",
@@ -541,7 +728,6 @@ async def launch_mas_interactive(
                                     }
                                 })
                             
-                            # Get input from handler
                             user_input = await input_handler(prompt_line)
                             
                             if user_input is not None:
@@ -554,6 +740,9 @@ async def launch_mas_interactive(
                                     line_buffer = ""
                                     detector.last_input_time = asyncio.get_event_loop().time()
                                     
+                                    if user_input.lower() == 'y':
+                                        output_buffer.reset_for_new_mas()
+                                    
                                 except (BrokenPipeError, RuntimeError) as e:
                                     print(f"[SHEPHERD] Process terminated while sending input: {e}")
                                     break
@@ -561,106 +750,40 @@ async def launch_mas_interactive(
                         no_output_count = 0
                         continue
                     
-                    # Special check for "Run another MAS?" which often comes after a newline
-                    if current_buffer and ("Run another MAS?" in current_buffer or "▶️" in current_buffer):
-                        # Check if it looks complete (ends with : or has (y/N))
-                        if current_buffer.endswith(':') or '(y/N)' in current_buffer:
-                            prompt_line = current_buffer
-                            
-                            # Skip if already seen this exact prompt
-                            if prompt_line not in detector.seen_prompts:
-                                # Clear the prompt from our output buffer
-                                output_buffer.clear_prompt()
-                                
-                                # Mark this prompt as seen
-                                detector.seen_prompts.add(prompt_line)
-                                
-                                # Send prompt notification via WebSocket
-                                if ws_manager:
-                                    await ws_manager.send_log(run_id, {
-                                        "type": "prompt",
-                                        "data": {
-                                            "prompt": prompt_line,
-                                            "multiline": False
-                                        }
-                                    })
-                                
-                                # Get input from handler
-                                user_input = await input_handler(prompt_line)
-                                
-                                if user_input is not None:
-                                    try:
-                                        if process.returncode is None:
-                                            process.stdin.write((user_input + '\n').encode())
-                                            await process.stdin.drain()
-                                        
-                                        buffer = ""
-                                        line_buffer = ""
-                                        detector.last_input_time = asyncio.get_event_loop().time()
-                                        
-                                    except (BrokenPipeError, RuntimeError) as e:
-                                        print(f"[SHEPHERD] Process terminated while sending input: {e}")
-                                        if ws_manager:
-                                            await ws_manager.send_log(run_id, {
-                                                "type": "error",
-                                                "data": {
-                                                    "error": "Process terminated unexpectedly",
-                                                    "details": str(e)
-                                                }
-                                            })
-                                        break
-                            
-                            no_output_count = 0
-                            continue
-                    # No new data - check various conditions
-                    current_time = asyncio.get_event_loop().time()
-                    time_since_last = current_time - last_char_time
-                    
-                    # Check if we're in a silent wait state after hypothesis instructions
+                    # Check for hypothesis prompt (silent wait)
                     hypothesis_instruction_seen = False
-                    print(f"[DEBUG] Checking for hypothesis in recent_lines: {detector.recent_lines[-5:]}")
                     for line in detector.recent_lines[-5:]:
                         if "Enter hypothesis (press Enter twice when done):" in line:
-                            print(f"[DEBUG] Found hypothesis instruction in: {line}")
                             hypothesis_instruction_seen = True
                             break
                     
+                    current_time = asyncio.get_event_loop().time()
+                    time_since_last = current_time - last_char_time
+                    
                     if hypothesis_instruction_seen and time_since_last > 0.5 and not detector.waiting_for_multiline:
-                        print(f"[DEBUG] Hypothesis conditions met - entering multiline mode")
-                        # MAS printed hypothesis instructions and is now silently waiting
                         if "hypothesis_silent_wait" in detector.seen_prompts:
-                            print(f"[DEBUG] Skipping - hypothesis_silent_wait already in seen_prompts")
                             continue
-
+                        
                         detector.waiting_for_multiline = True
                         detector.seen_prompts.add("hypothesis_silent_wait")
-                        
-                        # Clear any prompt from output buffer
                         output_buffer.clear_prompt()
                         
-                        # Send prompt notification via WebSocket
                         if ws_manager:
                             await ws_manager.send_log(run_id, {
                                 "type": "prompt",
                                 "data": {
-                                    "prompt": '''Enter your detailed vulnerability hypothesis (2-3 lines):\n
-                                     Example: 'This function allows reentrancy attacks because it calls external contracts before updating state variables, which could allow attackers to drain funds by repeatedly calling the function.\n'
-                                    ''',
-                                    "multiline": False  # We handle multiline internally
+                                    "prompt": "Enter your detailed vulnerability hypothesis:",
+                                    "multiline": False
                                 }
                             })
                         
-                        # Get the hypothesis input
                         user_input = await input_handler("Enter your detailed vulnerability hypothesis:")
                         
                         if user_input is not None:
                             try:
                                 if process.returncode is None:
-                                    # Send the entire hypothesis
                                     process.stdin.write((user_input + '\n').encode())
                                     await process.stdin.drain()
-                                    
-                                    # Send empty line to end input
                                     process.stdin.write('\n'.encode())
                                     await process.stdin.drain()
                                     
@@ -670,47 +793,7 @@ async def launch_mas_interactive(
                                 
                             except (BrokenPipeError, RuntimeError) as e:
                                 print(f"[SHEPHERD] Process terminated while sending input: {e}")
-                                if ws_manager:
-                                    await ws_manager.send_log(run_id, {
-                                        "type": "error",
-                                        "data": {
-                                            "error": "Process terminated unexpectedly",
-                                            "details": str(e)
-                                        }
-                                    })
                                 break
-                        
-                        no_output_count = 0
-                        continue
-                    
-                    # Special handling for multi-line input mode
-                    if detector.waiting_for_multiline and no_output_count > 5:
-                        # MAS is silently waiting for more input
-                        # Request another line from user via WebSocket
-                        if ws_manager:
-                            await ws_manager.send_log(run_id, {
-                                "type": "prompt_continuation",
-                                "data": {
-                                    "prompt": "(waiting for more lines...)",
-                                    "multiline": True
-                                }
-                            })
-                        
-                        # Get input from handler
-                        user_input = await input_handler("", multiline_continuation=True)
-                        
-                        # Send to MAS
-                        process.stdin.write((user_input + '\n').encode())
-                        await process.stdin.drain()
-                        
-                        if user_input.strip() == "":
-                            detector.multiline_empty_count += 1
-                            if detector.multiline_empty_count >= 1:
-                                # User pressed enter on empty line, done with multi-line
-                                detector.waiting_for_multiline = False
-                                detector.multiline_empty_count = 0
-                        else:
-                            detector.multiline_empty_count = 0
                         
                         no_output_count = 0
                         continue
@@ -720,25 +803,17 @@ async def launch_mas_interactive(
                         prompt_line = buffer.strip()
                         
                         if "press enter twice" in prompt_line.lower():
-                            continue  # handled by silent-wait logic
+                            continue
                         if "detailed vulnerability hypothesis" in prompt_line.lower():
-                            continue  # handled by silent-wait logic
-
-                        # Skip if this is the hypothesis case (already handled above)
+                            continue
                         if "hypothesis_silent_wait" in detector.seen_prompts:
                             continue
-                        
-                        # Skip if already seen this exact prompt
                         if prompt_line in detector.seen_prompts:
                             continue
                         
-                        # Clear the prompt from our output buffer
                         output_buffer.clear_prompt()
-                        
-                        # Mark this prompt as seen
                         detector.seen_prompts.add(prompt_line)
                         
-                        # Send prompt notification via WebSocket (this is the ONLY place the prompt should be sent)
                         if ws_manager:
                             await ws_manager.send_log(run_id, {
                                 "type": "prompt",
@@ -748,12 +823,10 @@ async def launch_mas_interactive(
                                 }
                             })
                         
-                        # Get input from handler
                         user_input = await input_handler(prompt_line)
                         
                         if user_input is not None:
                             try:
-                                # Normal single line input
                                 if process.returncode is None:
                                     process.stdin.write((user_input + '\n').encode())
                                     await process.stdin.drain()
@@ -763,16 +836,7 @@ async def launch_mas_interactive(
                                 detector.last_input_time = current_time
                                 
                             except (BrokenPipeError, RuntimeError) as e:
-                                # Process has terminated
                                 print(f"[SHEPHERD] Process terminated while sending input: {e}")
-                                if ws_manager:
-                                    await ws_manager.send_log(run_id, {
-                                        "type": "error",
-                                        "data": {
-                                            "error": "Process terminated unexpectedly",
-                                            "details": str(e)
-                                        }
-                                    })
                                 break
                     
                     # Check if process has ended
@@ -787,26 +851,23 @@ async def launch_mas_interactive(
                 
                 # Update last character time
                 last_char_time = asyncio.get_event_loop().time()
-                current_time = last_char_time
                 
                 # Decode character
                 char = data.decode('utf-8', errors='ignore')
                 
-                # Check if we just saw a recursion error
+                # Check for error state
                 if "GRAPH_RECURSION_LIMIT" in "".join(all_output[-500:]):
-                    if not error_state:  # Only print when first entering error state
+                    if not error_state:
                         print(f"[DEBUG] ENTERING ERROR STATE - detected GRAPH_RECURSION_LIMIT")
                     error_state = True
-                # Always accumulate buffer regardless of error state
+                    output_buffer.error_state = True
+                
+                # Always accumulate buffer
                 buffer += char
                 line_buffer += char
                 
-                if "Run another" in buffer:
-                    print(f"[DEBUG] Buffer contains 'Run another': {repr(buffer)}")
-                    print(f"[DEBUG] Error state: {error_state}")
-                    
+                # Handle "Run another MAS?" prompt detection
                 if "Run another MAS?" in buffer and ("(y/N): " in buffer or buffer.endswith(": ")):
-                    # Extract just the prompt line from the buffer
                     lines = buffer.split('\n')
                     prompt_line = None
                     for line in lines:
@@ -814,94 +875,67 @@ async def launch_mas_interactive(
                             prompt_line = line.strip()
                             break
                     
-                    # If buffer doesn't have newlines, the whole buffer might be the prompt
                     if not prompt_line and "Run another MAS?" in buffer and buffer.endswith(": "):
                         prompt_line = buffer.strip()
                         
-                    if prompt_line:
-                        print(f"[DEBUG] COMPLETE PROMPT DETECTED: {prompt_line}")
-                        print(f"[DEBUG] ws_manager exists: {ws_manager is not None}")
-                        print(f"[DEBUG] Already seen: {prompt_line in detector.seen_prompts}")
+                    if prompt_line and prompt_line not in detector.seen_prompts:
+                        if "Run another MAS?" in prompt_line:
+                            output_buffer.handling_run_another_mas = True  # Only set for this specific prompt
+                        if not error_state:
+                            output_buffer.clear_prompt()
                         
-                        if prompt_line not in detector.seen_prompts:
-                            # Clear from output buffer if not in error state
-                            print(f"[DEBUG] Sending prompt to WebSocket...")
-                            if not error_state:
-                                output_buffer.clear_prompt()
-                            
-                            # Send as prompt
-                            detector.seen_prompts.add(prompt_line)
-                            if ws_manager:
-                                print(f"[DEBUG] Actually sending via WebSocket...")
-                                await ws_manager.send_log(run_id, {
-                                    "type": "prompt",
-                                    "data": {
-                                        "prompt": prompt_line,
-                                        "multiline": False
-                                    }
-                                })
-                                print(f"[DEBUG] WebSocket send complete!")
-                            else:
-                                print(f"[DEBUG] ws_manager is None!")
-                            # Get input and send to process
-                            user_input = await input_handler(prompt_line)
-                            if user_input is not None:
-                                try:
-                                    if process.returncode is None:
-                                        process.stdin.write((user_input + '\n').encode())
-                                        await process.stdin.drain()
-                                    
-                                    buffer = ""
-                                    line_buffer = ""
-                                    error_state = False  # Reset error state if it was set
-                                    detector.last_input_time = asyncio.get_event_loop().time()
-                                    
-                                    if user_input.lower() == 'y':
-                                        print(f"[DEBUG] User chose to run another MAS - clearing seen_prompts")
-                                        # Save special markers that should persist
-                                        detector.seen_prompts.clear()
-                                                                                
-                                        # Also reset the multiline waiting state for fresh iteration
-                                        detector.waiting_for_multiline = False
-                                        detector.multiline_empty_count = 0
-                                        print(f"[DEBUG] Cleared MAS prompts for new iteration")
-                                except (BrokenPipeError, RuntimeError) as e:
-                                    print(f"[SHEPHERD] Process terminated while sending input: {e}")
-                                    break
+                        detector.seen_prompts.add(prompt_line)
+                        if ws_manager:
+                            await ws_manager.send_log(run_id, {
+                                "type": "prompt",
+                                "data": {
+                                    "prompt": prompt_line,
+                                    "multiline": False
+                                }
+                            })
                         
-                        # Skip remaining processing
+                        user_input = await input_handler(prompt_line)
+                        if user_input is not None:
+                            try:
+                                if process.returncode is None:
+                                    process.stdin.write((user_input + '\n').encode())
+                                    await process.stdin.drain()
+                                
+                                buffer = ""
+                                line_buffer = ""
+                                error_state = False
+                                output_buffer.error_state = False
+                                detector.last_input_time = asyncio.get_event_loop().time()
+                                
+                                if user_input.lower() == 'y':
+                                    output_buffer.reset_for_new_mas()
+                                    
+                            except (BrokenPipeError, RuntimeError) as e:
+                                print(f"[SHEPHERD] Process terminated while sending input: {e}")
+                                break
+                        
                         continue
-                    
+                
+                # Process character through output buffer
                 if error_state:
-                    # If in error state, skip OutputBuffer
+                    # In error state, send directly
                     log_file.write(char)
                     log_file.flush()
                     print(char, end='', flush=True)
                     all_output.append(char)
-                    
+                else:
+                    # Normal flow - use output buffer with tag processing
+                    await output_buffer.add_char(char)
+                    log_file.write(char)
+                    log_file.flush()
+                    print(char, end='', flush=True)
+                    all_output.append(char)
+                
+                # Handle newlines for buffer management
                 if char == '\n':
-                    # Add line to history even in error state
                     if buffer.strip():
                         detector.add_line(buffer.strip())
-                    # Clear buffer if not building "Run another MAS?"
                     if "Run another MAS?" not in buffer:
-                        buffer = ""
-                        line_buffer = ""
-                    continue
-                else:
-                    # Normal flow - use output buffer
-                    await output_buffer.add_char(char)
-                    # Write to log
-                    log_file.write(char)
-                    log_file.flush()
-                    print(char, end='', flush=True)
-                    all_output.append(char)
-                    # Handle newlines for buffer management
-                    if char == '\n':
-                        # Add completed line to detector history
-                        if buffer.strip():
-                            print(f"[DEBUG] Adding line to recent_lines: {buffer.strip()}")
-                            detector.add_line(buffer.strip())
                         buffer = ""
                         line_buffer = ""
         
@@ -912,17 +946,11 @@ async def launch_mas_interactive(
         process.stdin.close()
         
         print(f"\n[SHEPHERD DEBUG] Main loop ended. Process returncode: {process.returncode}")
-        print(f"[SHEPHERD DEBUG] Last output lines:")
-        for line in detector.recent_lines[-10:]:
-            print(f"  > {line}")
-            
+        
         # Wait for process to complete
         return_code = await process.wait()
         
         print(f"\n[SHEPHERD] Process exited with code: {return_code}")
-        
-        last_output = "".join(all_output[-500:]) if all_output else ""
-        print(f"[SHEPHERD DEBUG] Last 500 chars of output:\n{last_output}")
         
         # Send completion notification
         if ws_manager:
@@ -939,7 +967,7 @@ async def launch_mas_interactive(
             "exit_code": return_code,
             "log_file": str(log_file_path),
             "output": "".join(all_output),
-            "pid": process.pid  # ADD THIS
+            "pid": process.pid
         }
         
     except Exception as e:
@@ -963,8 +991,6 @@ async def launch_mas_interactive(
             "error": str(e),
             "traceback": traceback.format_exc()
         }
-
-
 
 # Helper function for creating WebSocket-based input handler
 def create_ws_input_handler(run_id: str, input_queue: asyncio.Queue):
