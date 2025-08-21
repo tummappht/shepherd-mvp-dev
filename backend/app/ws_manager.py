@@ -2,7 +2,6 @@
 from collections import defaultdict, deque
 from typing import Dict, Set
 from fastapi import WebSocket
-
 class WebSocketManager:
     """
     • Keeps {run_id → set(WebSocket)}  

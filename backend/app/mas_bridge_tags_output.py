@@ -14,6 +14,30 @@ load_dotenv()
 MAS_REPO_PATH = os.environ.get("MAS_REPO_PATH", "../blackRabbit")
 MAS_PYTHON_PATH = os.environ.get("MAS_PYTHON_PATH", "python")
 
+def clean_all_tags(text):
+    """Remove ALL tags in <<<TAG>>> format from any text"""
+    if not text:
+        return text
+    
+    # Pattern to match ANY tag: <<<ANYTHING>>> ... <<<END_ANYTHING>>>
+    # This will match nested tags, partial tags, any tag format
+    cleaned = text
+    
+    # Remove complete tag pairs: <<<TAG>>>content<<<END_TAG>>>
+    cleaned = re.sub(r'<<<[^>]+>>>.*?<<<END_[^>]+>>>', '', cleaned, flags=re.DOTALL)
+    
+    # Remove any standalone opening tags: <<<TAG>>>
+    cleaned = re.sub(r'<<<[^>]+>>>', '', cleaned)
+    
+    # Remove any standalone closing tags: <<<END_TAG>>>
+    cleaned = re.sub(r'<<<END_[^>]+>>>', '', cleaned)
+    
+    # Remove any partial tags that might be cut off: <<<... or ...>>>
+    cleaned = re.sub(r'<<<[^>]*$', '', cleaned)  # Remove incomplete opening tags at end
+    cleaned = re.sub(r'^[^<]*>>>', '', cleaned)  # Remove incomplete closing tags at start
+    
+    return cleaned.strip()
+
 class TagParser:
     """Parser for MAS structured output tags"""
     
@@ -105,20 +129,24 @@ class TagParser:
     def _parse_tag_content(self, tag_type: str, content: str):
         """Parse the content based on tag type"""
         try:
-            # Try to parse as JSON
+            # Clean ALL tags from content before doing anything else
             content = content.strip()
+            
+            # This will remove <<<END_AGENT>>> even inside JSON strings
+            content = clean_all_tags(content)
+            
             if content.startswith('{') and content.endswith('}'):
+                # Now parse the already-cleaned JSON
                 data = json.loads(content)
             else:
                 data = {"content": content}
             
             return {
-                "type": tag_type.lower().replace('_', '-'),  # Convert to kebab-case for WebSocket
+                "type": tag_type.lower().replace('_', '-'),
                 "data": data,
                 "tag_type": tag_type
             }
         except json.JSONDecodeError:
-            # If not valid JSON, return as raw content
             return {
                 "type": tag_type.lower().replace('_', '-'),
                 "data": {"content": content},
@@ -132,7 +160,7 @@ class TagParser:
                 "type": "incomplete-tag",
                 "data": {
                     "tag": self.current_tag,
-                    "partial_content": self.tag_content
+                    "partial_content": clean_all_tags(self.tag_content)
                 }
             }
         return None
@@ -388,16 +416,18 @@ class TagAwareOutputBuffer:
                         "stream_id": self.current_stream_id,
                         "tag_type": self.current_tag_type
                     })
-                # Clear the tag marker from buffer
-                self.buffer = self.buffer[:-len(start_pattern)]
+                # Clear the entire buffer after detecting start
+                self.buffer = ""
                 return
         
         # Check if we're exiting a tag
         if self.inside_tag and self.current_tag_type:
             end_pattern = f'<<<END_{self.current_tag_type}>>>'
+            
+            # Check if the buffer ends with the complete end pattern
             if self.buffer.endswith(end_pattern):
-                # Remove the end pattern from buffer
-                content = self.buffer[:-len(end_pattern)]
+                # The content is everything we accumulated BEFORE the end pattern
+                # current_tag_content already has the content without the end pattern
                 
                 # Parse and send the complete tag content
                 parsed = self._parse_tag_content(self.current_tag_type, self.current_tag_content)
@@ -422,18 +452,15 @@ class TagAwareOutputBuffer:
                 self.buffer = ""
                 return
             else:
-                # Accumulate content inside tag
-                self.current_tag_content += char
+                # Only accumulate content if we're not building the end pattern
+                # Check if buffer might be building toward the end pattern
+                for i in range(1, len(end_pattern)):
+                    if self.buffer.endswith(end_pattern[:i]):
+                        # We're starting to match the end pattern, don't accumulate
+                        return
                 
-                # Optional: Stream partial content while inside tag
-                # Uncomment if you want real-time streaming within tags
-                # if self.ws_manager and char:
-                #     await self.ws_manager.send_log(self.run_id, {
-                #         "type": "stream_partial",
-                #         "stream_id": self.current_stream_id,
-                #         "tag_type": self.current_tag_type,
-                #         "data": char
-                #     })
+                # Safe to accumulate this character (not part of end pattern)
+                self.current_tag_content += char
         
         # Handle prompts (keep existing logic but don't send regular output)
         if "Run another MAS?" in self.buffer or "â–¶ï¸" in self.buffer:
@@ -472,8 +499,14 @@ class TagAwareOutputBuffer:
     def _parse_tag_content(self, tag_type: str, content: str):
         """Parse the content based on tag type"""
         try:
+            # Clean ALL tags from content before doing anything else
             content = content.strip()
+            
+            # This will remove <<<END_AGENT>>> even inside JSON strings
+            content = clean_all_tags(content)
+            
             if content.startswith('{') and content.endswith('}'):
+                # Now parse the already-cleaned JSON
                 data = json.loads(content)
             else:
                 data = {"content": content}
@@ -527,7 +560,7 @@ class TagAwareOutputBuffer:
                     "type": "incomplete_tag",
                     "stream_id": self.current_stream_id,
                     "tag_type": self.current_tag_type,
-                    "partial_content": self.current_tag_content
+                    "partial_content": clean_all_tags(self.current_tag_content)
                 })
         self.hold_buffer = ""
         self.buffer = ""
@@ -723,7 +756,7 @@ async def launch_mas_interactive(
                                 await ws_manager.send_log(run_id, {
                                     "type": "prompt",
                                     "data": {
-                                        "prompt": prompt_line,
+                                        "prompt": clean_all_tags(prompt_line),
                                         "multiline": False
                                     }
                                 })
@@ -818,7 +851,7 @@ async def launch_mas_interactive(
                             await ws_manager.send_log(run_id, {
                                 "type": "prompt",
                                 "data": {
-                                    "prompt": prompt_line,
+                                    "prompt": clean_all_tags(prompt_line),
                                     "multiline": False
                                 }
                             })
@@ -889,7 +922,7 @@ async def launch_mas_interactive(
                             await ws_manager.send_log(run_id, {
                                 "type": "prompt",
                                 "data": {
-                                    "prompt": prompt_line,
+                                    "prompt": clean_all_tags(prompt_line),
                                     "multiline": False
                                 }
                             })
