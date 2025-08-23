@@ -193,6 +193,7 @@ class PromptDetector:
             r'\(\d+/\d+\)',  # (1/10) style progress
             r'\.{3,}',  # Multiple dots ...
             r'\s{2,}\d+\s{2,}',  # Spaced numbers
+            r'[│├└─═║╔╗╚╝]',  # Box drawing characters
             r'^\s*\*+\s*$',  # Lines of asterisks
             r'^\s*-+\s*$',  # Lines of dashes
             r'^\s*=+\s*$',  # Lines of equals
@@ -248,7 +249,7 @@ class PromptDetector:
             r'Enter the specific function.*:$',
             r'Enter hypothesis.*:$',
             r'Enter your detailed vulnerability hypothesis.*:$',
-            r'â–¶ï¸\s*Run another MAS\?.*:$', 
+            r'▶️\s*Run another MAS\?.*:$', 
             r'Run another MAS\?.*:$',  
             r'\(y/N\):?\s*$',  
         ]
@@ -365,9 +366,6 @@ class TagAwareOutputBuffer:
         self.pending_prompt = None
         self.needs_input = False
         
-        # Track if we've recently handled a hypothesis prompt via USER_INPUT
-        self.handled_hypothesis_via_tag = False
-        
     async def add_char(self, char: str):
         """Character-by-character processing - only send when inside tags"""
         self.buffer += char
@@ -419,10 +417,6 @@ class TagAwareOutputBuffer:
                     if value is None and prompt_text:
                         # Clean up the prompt text
                         clean_prompt = prompt_text.strip()
-                        
-                        # Check if this is a hypothesis prompt
-                        if "hypothesis" in clean_prompt.lower():
-                            self.handled_hypothesis_via_tag = True
                         
                         # Check if we haven't already handled this prompt
                         prompt_key = f"{clean_prompt}_{self.current_stream_id}"
@@ -523,7 +517,6 @@ class TagAwareOutputBuffer:
         self.current_stream_id = None
         self.pending_prompt = None
         self.needs_input = False
-        self.handled_hypothesis_via_tag = False
     
     async def flush_if_not_prompt(self):
         """Modified: Only clear buffers"""
@@ -707,14 +700,6 @@ async def launch_mas_interactive(
                         
                         print(f"[SHEPHERD] Processing USER_INPUT prompt: {prompt_text}")
                         
-                        # Check if this is a hypothesis prompt and mark it
-                        if "hypothesis" in prompt_text.lower():
-                            output_buffer.handled_hypothesis_via_tag = True
-                            # Add to seen prompts to prevent legacy detection
-                            detector.seen_prompts.add("hypothesis_silent_wait")
-                            detector.seen_prompts.add("Enter your detailed vulnerability hypothesis:")
-                            detector.seen_prompts.add("Enter your detailed vulnerability hypothesis")
-                        
                         # Clear the pending prompt immediately
                         output_buffer.clear_prompt()
                         
@@ -727,11 +712,6 @@ async def launch_mas_interactive(
                                     # Send the input to the process
                                     process.stdin.write((user_input + '\n').encode())
                                     await process.stdin.drain()
-                                    
-                                    # For hypothesis, send extra newline
-                                    if "hypothesis" in prompt_text.lower():
-                                        process.stdin.write('\n'.encode())
-                                        await process.stdin.drain()
                                     
                                     print(f"[SHEPHERD] Sent user input: {user_input}")
                                     
@@ -753,28 +733,24 @@ async def launch_mas_interactive(
                         
                         no_output_count = 0
                         continue
-                    
                     # Flush non-prompt buffers on timeout
                     await output_buffer.flush_if_not_prompt()
                     
                     current_buffer = buffer.strip()
                     recent_output = "".join(all_output[-100:]) if all_output else ""
-                    
-                    # Check for hypothesis prompt (silent wait) - SKIP if already handled via tag or seen
+                    # Check for hypothesis prompt (silent wait)
+         
                     hypothesis_instruction_seen = False
                     for line in detector.recent_lines[-5:]:
                         if "Enter hypothesis (press Enter twice when done):" in line:
                             hypothesis_instruction_seen = True
                             break
                     
-                    # Only process if we haven't already handled this via USER_INPUT tag
+                    current_time = asyncio.get_event_loop().time()
+                    time_since_last = current_time - last_char_time
+                    
                     if hypothesis_instruction_seen and time_since_last > 0.5 and not detector.waiting_for_multiline:
                         if "hypothesis_silent_wait" in detector.seen_prompts:
-                            continue
-                        
-                        # Double-check we haven't just handled a hypothesis via tag
-                        if output_buffer.handled_hypothesis_via_tag:
-                            output_buffer.handled_hypothesis_via_tag = False  # Reset for next time
                             continue
                         
                         detector.waiting_for_multiline = True
