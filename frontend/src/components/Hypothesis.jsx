@@ -4,10 +4,27 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { FaEdit, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 
+/* ---------- helpers ---------- */
+
 const makeRunId = () =>
     (typeof crypto !== "undefined" && crypto.randomUUID)
         ? crypto.randomUUID()
         : `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+    function getSingletonWS(url) {
+    if (typeof window === "undefined") return new WebSocket(url);
+    const pool = (window.__masWsPool ||= new Map());
+    const existing = pool.get(url);
+    if (existing && existing.readyState < 2) return existing; // 0 CONNECTING, 1 OPEN
+    const ws = new WebSocket(url);
+    pool.set(url, ws);
+    ws.addEventListener("close", () => {
+        if (pool.get(url) === ws) pool.delete(url);
+    });
+    return ws;
+    }
+
+    /* ---------- component ---------- */
 
     export default function Hypothesis({ id, title, onMinimize, minimized }) {
     const [messages, setMessages] = useState([]);
@@ -16,16 +33,28 @@ const makeRunId = () =>
 
     const messagesEndRef = useRef(null);
     const socketRef = useRef(null);
-    const runIdRef = useRef(id ?? makeRunId());
+    const startedRef = useRef(false);
+
+    // Stable run id across re-renders
+    const runIdRef = useRef(makeRunId());
     const runId = runIdRef.current;
 
+    // Publish runId so Diagram (or others) can reuse it
+    useEffect(() => {
+        try { localStorage.setItem("masRunId", runId); } catch {}
+        try { window.dispatchEvent(new CustomEvent("mas:runId", { detail: runId })); } catch {}
+    }, [runId]);
+
+    // Optional repo URL from query string
     const searchParams = useSearchParams();
     const repoUrl = searchParams.get("repoUrl");
 
-    // Prefer env var; default to dev API for local testing
-    const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://shepherd-mas-dev.fly.dev").replace(/\/+$/, "");
+    // Backend base (env or fallback)
+    const API_BASE = useMemo(() => {
+        return (process.env.NEXT_PUBLIC_API_BASE_URL || "https://shepherd-mas-dev.fly.dev").replace(/\/+$/, "");
+    }, []);
 
-    // Build ws(s) URL from API_BASE, sharing the SAME runId
+    // ws(s)://.../ws/{runId}
     const socketUrl = useMemo(() => {
         const u = new URL(API_BASE);
         u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
@@ -33,64 +62,112 @@ const makeRunId = () =>
         return u.toString();
     }, [API_BASE, runId]);
 
-    // Trigger MAS run
-    useEffect(() => {
-        if (!repoUrl) return;
-        fetch(`${API_BASE}/runs/${runId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ github_url: repoUrl }),
-        }).catch(() => {});
-    }, [API_BASE, repoUrl, runId]);
+    // ---- message processor (handles tagged envelopes and JSON) ----
+    const applyMessage = (text) => {
+        if (text) setMessages(prev => [...prev, { from: "system", text }]);
+    };
 
-    // WebSocket setup
+    const processRaw = (raw) => {
+        // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
+        if (typeof raw === "string") {
+        const m = raw.match(/^<<<([A-Z_]+)>>>([\s\S]*?)<<<END_\1>>>$/);
+        if (m) {
+            const tag = m[1];                 // e.g. DESCRIPTION, PROMPT
+            let inner = {};
+            try { inner = JSON.parse(m[2]); } catch {}
+            const tagLower = (inner?.tag_type || tag || "").toString().toLowerCase();
+
+            if (tagLower === "description") {
+            applyMessage(inner?.message || inner?.text || "");
+            return;
+            }
+            if (tagLower === "prompt") {
+            const t = inner?.prompt || inner?.message || "";
+            if (t) applyMessage(t);
+            setWaitingForInput(true);
+            return;
+            }
+            // add more tag handlers as needed (e.g., OUTPUT, STDERR)
+        }
+        }
+
+        // 2) Fallback: legacy JSON payloads { type, data }
+        let msg;
+        try { msg = JSON.parse(raw || "{}"); } catch { msg = null; }
+        if (!msg?.type) return;
+
+        const t = String(msg.type).toLowerCase();
+        if (t === "prompt") {
+        applyMessage(msg.data?.prompt || "");
+        setWaitingForInput(true);
+        return;
+        }
+        if (t === "description") {
+        // backend might send {data: {message}} or just a string
+        applyMessage(msg.data?.message || msg.data || "");
+        return;
+        }
+        if (t === "output" || t === "stderr" || t === "stdout" || t === "log") {
+        applyMessage(typeof msg.data === "string" ? msg.data.trim() : (msg.data?.message || ""));
+        return;
+        }
+    };
+
+    // WebSocket setup — start the run on open, then just stream (no polling)
     useEffect(() => {
-        const socket = new WebSocket(socketUrl);
+        const socket = getSingletonWS(socketUrl);
         socketRef.current = socket;
 
-        socket.onopen = () => {
-        // connected
-        };
-
-        socket.onmessage = (event) => {
-        let parsed;
-        try {
-            parsed = JSON.parse(event.data || "{}");
-        } catch {
-            parsed = null;
-        }
-        if (!parsed?.type || parsed.data == null) return;
-
-        let text = "";
-        if (parsed.type === "prompt") {
-            text = parsed.data.prompt || "";
-            setWaitingForInput(true);
-        } else if (parsed.type === "output" || parsed.type === "stderr") {
-            text = typeof parsed.data === "string" ? parsed.data.trim() : "";
-        }
-
-        if (text) {
-            setMessages((prev) => [...prev, { from: "system", text }]);
+        const onOpen = async () => {
+        if (!startedRef.current) {
+            startedRef.current = true;
+            try {
+            const body = repoUrl ? { github_url: repoUrl } : {};
+            await fetch(`${API_BASE}/runs/${runId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            } catch {
+            // ignore; if the run already exists, WS streaming should still work
+            }
         }
         };
 
-        socket.onerror = (err) => {
+        const onMessage = (event) => {
+        // event.data can be string or Blob
+        const raw = event.data;
+        if (raw instanceof Blob) {
+            raw.text().then(processRaw).catch(() => {});
+        } else {
+            processRaw(raw);
+        }
+        };
+
+        const onError = (e) => {
         // eslint-disable-next-line no-console
-        console.error("WebSocket error:", err);
+        console.error("WebSocket error:", e);
         };
+
+        socket.addEventListener("open", onOpen);
+        socket.addEventListener("message", onMessage);
+        socket.addEventListener("error", onError);
 
         return () => {
-        socket.close();
+        socket.removeEventListener("open", onOpen);
+        socket.removeEventListener("message", onMessage);
+        socket.removeEventListener("error", onError);
         };
-    }, [socketUrl]);
+    }, [socketUrl, API_BASE, repoUrl, runId]);
 
+    // Auto-scroll to latest message
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
     const handleSend = () => {
         if (!input.trim() || !waitingForInput) return;
-        setMessages((prev) => [...prev, { from: "user", text: input }]);
+        setMessages(prev => [...prev, { from: "user", text: input }]);
         socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
         setInput("");
         setWaitingForInput(false);
@@ -103,7 +180,7 @@ const makeRunId = () =>
             <p className="font-semibold">{title}</p>
             <FaEdit className="text-sm text-gray-400" />
             </div>
-            <button onClick={() => onMinimize?.(runId)}>
+            <button onClick={() => onMinimize?.(id)}>
             <FaWindowMinimize className="text-gray-400" />
             </button>
         </div>

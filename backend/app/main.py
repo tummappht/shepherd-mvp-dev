@@ -49,6 +49,22 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ws_manager = WebSocketManager()
 
+origins = [
+    # "http://localhost:3000",
+    # "http://127.0.0.1:3000",
+    # "http://localhost:3001",
+    "https://shepherd-mas-dev.fly.dev",
+]
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,      # or ["*"] for quick local testing
+    allow_credentials=True,
+    allow_methods=["*"],        # ensures POST, OPTIONS, etc. are allowed
+    allow_headers=["*"],        # allows Content-Type: application/json
+)
+
+
 # Store input queues for each run
 input_queues: Dict[str, asyncio.Queue] = {}
 
