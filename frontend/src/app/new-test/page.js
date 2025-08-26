@@ -30,13 +30,17 @@ export default function NewTest() {
                         <p className="text-[#595959]">Insert the repository link you&apos;d like to explore</p>
                     </div>
                 </div>
-                <input
-                    type="text"
-                    className="w-full p-4 border border-[#232323] rounded-md bg-[#0C0C0C] text-[#595959] placeholder-[#595959] placeholder:italic"
-                    placeholder="Enter URL..."
+                <select
+                    className="w-full p-4 border border-[#232323] rounded-md bg-[#0C0C0C] text-[#e5e7eb]"
                     value={repoUrl}
                     onChange={(e) => setRepoUrl(e.target.value)}
-                />
+                    >
+                    <option value="" disabled>Choose repository…</option>
+                    <option value="https://github.com/dhruvjain2905/naive-receiver">
+                        https://github.com/dhruvjain2905/naive-receiver
+                    </option>
+                </select>
+
             </div>
             <div className="flex flex-col space-y-4">
                 <div className="flex flex-col">

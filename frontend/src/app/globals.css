@@ -4,16 +4,20 @@
 
 @font-face {
   font-family: 'ABCWhyte';
-  src: url('/fonts/ABCWhyte-Medium-Trial.otf') format('otf');
+  src: url('/fonts/ABCWhyte-Medium-Trial.woff2') format('woff2'),
+       url('/fonts/ABCWhyte-Medium-Trial.otf') format('opentype');
   font-weight: 500;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'ABCWhyte';
-  src: url('/fonts/ABCWhyte-Regular-Trial.otf') format('otf');
+  src: url('/fonts/ABCWhyte-Regular-Trial.woff2') format('woff2'),
+       url('/fonts/ABCWhyte-Regular-Trial.otf') format('opentype');
   font-weight: 400;
   font-style: normal;
+  font-display: swap;
 }
 
 :root {
