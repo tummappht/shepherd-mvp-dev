@@ -115,49 +115,65 @@ const makeRunId = () =>
 
     // WebSocket setup — start the run on open, then just stream (no polling)
     useEffect(() => {
-        const socket = getSingletonWS(socketUrl);
-        socketRef.current = socket;
-
-        const onOpen = async () => {
+        console.log("use effect called:", runId);
         if (!startedRef.current) {
             startedRef.current = true;
-            try {
-            const body = repoUrl ? { github_url: repoUrl } : {};
-            await fetch(`${API_BASE}/runs/${runId}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-            } catch {
-            // ignore; if the run already exists, WS streaming should still work
-            }
+            console.log("Starting run for runId:", runId);
+            
+            const startRunThenSocket = async () => {
+                try {
+                    const body = repoUrl ? { github_url: repoUrl } : {};
+                    const response = await fetch(`${API_BASE}/runs/${runId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(body),
+                    });
+                    
+                    const result = await response.json();
+
+                    console.log("result is: ")
+
+                    console.log(result);
+
+                    if (result.status === "started")
+                    {
+                        // Run started successfully, now create WebSocket
+                        const socket = getSingletonWS(socketUrl);
+                        socketRef.current = socket;
+
+                        const onMessage = (event) => {
+                            // event.data can be string or Blob
+                            const raw = event.data;
+                            if (raw instanceof Blob) {
+                                raw.text().then(processRaw).catch(() => {});
+                            } else {
+                                processRaw(raw);
+                            }
+                        };
+
+                        const onError = (e) => {
+                            // eslint-disable-next-line no-console
+                            console.error("WebSocket error:", e);
+                        };
+
+                        socket.addEventListener("message", onMessage);
+                        socket.addEventListener("error", onError);
+                    } else if (result.status === "at capacity" || result.status === "queued" ) {
+                        alert("Server is at capacity. Please come back later.");
+                    }
+                    else{
+                        console.log("result status not parsed correctly")
+                    }
+                    
+                } catch (error) {
+                    // ignore; if the run already exists, WS streaming should still work
+                    console.error("Error in startRunThenSocket:", error);
+                    console.error("Error details:", error.message, error.stack);
+                }
+            };
+            
+            startRunThenSocket();
         }
-        };
-
-        const onMessage = (event) => {
-        // event.data can be string or Blob
-        const raw = event.data;
-        if (raw instanceof Blob) {
-            raw.text().then(processRaw).catch(() => {});
-        } else {
-            processRaw(raw);
-        }
-        };
-
-        const onError = (e) => {
-        // eslint-disable-next-line no-console
-        console.error("WebSocket error:", e);
-        };
-
-        socket.addEventListener("open", onOpen);
-        socket.addEventListener("message", onMessage);
-        socket.addEventListener("error", onError);
-
-        return () => {
-        socket.removeEventListener("open", onOpen);
-        socket.removeEventListener("message", onMessage);
-        socket.removeEventListener("error", onError);
-        };
     }, [socketUrl, API_BASE, repoUrl, runId]);
 
     // Auto-scroll to latest message
