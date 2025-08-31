@@ -41,12 +41,20 @@ const makeRunId = () =>
 
     // Define a router to redirect to different pages
     const router = useRouter();
+    const inputRef = useRef(null);
 
     // Publish runId so Diagram (or others) can reuse it
     useEffect(() => {
         try { localStorage.setItem("masRunId", runId); } catch {}
         try { window.dispatchEvent(new CustomEvent("mas:runId", { detail: runId })); } catch {}
     }, [runId]);
+
+    // Auto-focus input when waiting for user input
+    useEffect(() => {
+        if (waitingForInput && inputRef.current) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
+    }, [waitingForInput]);
 
     // Optional repo URL from query string
     const searchParams = useSearchParams();
@@ -102,6 +110,7 @@ const makeRunId = () =>
             const t = inner?.prompt || inner?.message || "";
             if (t) applyMessage(t);
             setWaitingForInput(true);
+            setTimeout(() => inputRef.current?.focus(), 100); // auto focus on the text box
             return;
             }
         }
@@ -135,11 +144,13 @@ const makeRunId = () =>
                     // fallback: ask the user to enter the repo url
                     applyMessage(msg.data?.prompt || "");
                     setWaitingForInput(true);
+                    setTimeout(() => inputRef.current?.focus(), 100);
                 }
                 return;
             }
             applyMessage(msg.data?.prompt || "");
             setWaitingForInput(true);
+            setTimeout(() => inputRef.current?.focus(), 100);
             return;
         }
         if (t === "description") {
@@ -147,7 +158,11 @@ const makeRunId = () =>
         applyMessage(msg.data?.message || msg.data || "");
         return;
         }
-        if (t === "output" || t === "stderr" || t === "stdout" || t === "log") {
+        if (t === "agent") {
+        applyMessage(`${msg.data?.agent_type || "Unknown"} agent:\n${msg.data?.content || msg.data || ""}`);
+        return;
+        }
+        if (t === "output" || t === "stdout" || t === "log") {
         applyMessage(typeof msg.data === "string" ? msg.data.trim() : (msg.data?.message || ""));
         return;
         }
@@ -277,6 +292,7 @@ const makeRunId = () =>
 
             <div className="flex items-center gap-2 mt-4">
                 <input
+                ref={inputRef}
                 type="text"
                 placeholder="Type your answer..."
                 value={input}
