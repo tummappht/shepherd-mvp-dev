@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { FaEdit, FaWindowMinimize } from "react-icons/fa";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 /* ---------- helpers ---------- */
 
@@ -39,6 +39,9 @@ const makeRunId = () =>
     const runIdRef = useRef(makeRunId());
     const runId = runIdRef.current;
 
+    // Define a router to redirect to different pages
+    const router = useRouter();
+
     // Publish runId so Diagram (or others) can reuse it
     useEffect(() => {
         try { localStorage.setItem("masRunId", runId); } catch {}
@@ -67,7 +70,20 @@ const makeRunId = () =>
         if (text) setMessages(prev => [...prev, { from: "system", text }]);
     };
 
+    const cancelRun = async () => {
+        try {
+            await fetch(`${API_BASE}/runs/${runId}/cancel`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+            });
+            console.log("Run canceled")
+        } catch (error) {
+            console.error("Failed to cancel run:", error);
+        }
+    };
+
     const processRaw = (raw) => {
+        console.log(raw);
         // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
         if (typeof raw === "string") {
         const m = raw.match(/^<<<([A-Z_]+)>>>([\s\S]*?)<<<END_\1>>>$/);
@@ -79,6 +95,7 @@ const makeRunId = () =>
 
             if (tagLower === "description") {
             applyMessage(inner?.message || inner?.text || "");
+            cancelRun();
             return;
             }
             if (tagLower === "prompt") {
@@ -87,7 +104,6 @@ const makeRunId = () =>
             setWaitingForInput(true);
             return;
             }
-            // add more tag handlers as needed (e.g., OUTPUT, STDERR)
         }
         }
 
@@ -98,9 +114,33 @@ const makeRunId = () =>
 
         const t = String(msg.type).toLowerCase();
         if (t === "prompt") {
-        applyMessage(msg.data?.prompt || "");
-        setWaitingForInput(true);
-        return;
+            const promptText = msg.data?.prompt || "";
+            
+            // Check if this is asking for GitHub URL
+            if (promptText.includes("Please enter a GitHub URL")) {
+                
+                console.log("🔗 Auto-responding to GitHub URL prompt with:", repoUrl);
+                
+                
+                // Auto-respond with the stored repo URL
+                if (repoUrl && socketRef.current) {
+                    
+                    // Send the repo URL automatically
+                    socketRef.current.send(JSON.stringify({ type: "input", data: repoUrl }));
+                    
+                    console.log("✅ Auto-sent repo URL:", repoUrl);
+                } else {
+                    console.error("❌ No repo URL available or WebSocket not connected");
+                    applyMessage("Error: No repository URL available");
+                    // fallback: ask the user to enter the repo url
+                    applyMessage(msg.data?.prompt || "");
+                    setWaitingForInput(true);
+                }
+                return;
+            }
+            applyMessage(msg.data?.prompt || "");
+            setWaitingForInput(true);
+            return;
         }
         if (t === "description") {
         // backend might send {data: {message}} or just a string
@@ -111,11 +151,33 @@ const makeRunId = () =>
         applyMessage(typeof msg.data === "string" ? msg.data.trim() : (msg.data?.message || ""));
         return;
         }
+        if (t === "idle_timeout") {
+        alert(String(msg.data?.message) || "This run has been canceled due to inactivity");
+        cancelRun();
+        router.push("/"); // Redirect to home page
+        return;
+        }
+        if (t === "complete") {
+        console.log("user entered N");
+        cancelRun();
+        return;
+        }
+        if (t === "stderr") {
+        const errorMsg = typeof msg.data === "string" ? msg.data.trim() : (msg.data?.message || "An error occurred");
+        applyMessage(`Error: ${errorMsg}`);
+        cancelRun(); // Cancel the run
+        return;
+        }
+        if (t === "error") {
+        const errorMsg = typeof msg.data === "string" ? msg.data.trim() : (msg.data?.message || "An error occurred");
+        applyMessage(`Error: ${errorMsg}`);
+        cancelRun(); // Cancel the run
+        return;
+        }
     };
 
     // WebSocket setup — start the run on open, then just stream (no polling)
     useEffect(() => {
-        console.log("use effect called:", runId);
         if (!startedRef.current) {
             startedRef.current = true;
             console.log("Starting run for runId:", runId);
@@ -130,8 +192,6 @@ const makeRunId = () =>
                     });
                     
                     const result = await response.json();
-
-                    console.log("result is: ")
 
                     console.log(result);
 
@@ -160,6 +220,7 @@ const makeRunId = () =>
                         socket.addEventListener("error", onError);
                     } else if (result.status === "at capacity" || result.status === "queued" ) {
                         alert("Server is at capacity. Please come back later.");
+                        router.push("/"); // Redirect to home page
                     }
                     else{
                         console.log("result status not parsed correctly")
