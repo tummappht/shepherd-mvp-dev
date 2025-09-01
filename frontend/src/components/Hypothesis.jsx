@@ -90,6 +90,21 @@ const makeRunId = () =>
         }
     };
 
+    const saveWaitlistEmail = async (email) => {
+        if (email && email.trim()) {
+            try {
+                await fetch(`${API_BASE}/save-waitlist-email`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email.trim() }),
+                });
+            } catch (error) {
+                console.error("Failed to save email:", error);
+                alert("Failed to save your email. Please try again later.");
+            }
+        }
+    };
+
     const processRaw = (raw) => {
         console.log(raw);
         // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
@@ -225,17 +240,40 @@ const makeRunId = () =>
                                 processRaw(raw);
                             }
                         };
-
-                        const onError = (e) => {
-                            // eslint-disable-next-line no-console
+                        
+                        const onError = async (e) => {
                             console.error("WebSocket error:", e);
+                            const email = prompt("Connection failed! Something went wrong on our end. Enter your email to be notified when we've got a fix:");
+                            await saveWaitlistEmail(email);
+                            router.push("/new-test");
+                        };
+
+                        const onClose = async (e) => {
+                            console.log("WebSocket closed, code:", e.code);
+                            if (e.code !== 1000 && e.code !== 1001) {
+                                const email = prompt("Connection lost unexpectedly! Enter your email to be notified when we've resolved the issue:");
+                                await saveWaitlistEmail(email);
+                                router.push("/new-test");
+                            }
                         };
 
                         socket.addEventListener("message", onMessage);
                         socket.addEventListener("error", onError);
-                    } else if (result.status === "at capacity" || result.status === "queued" ) {
-                        alert("Server is at capacity. Please come back later.");
+                        socket.addEventListener("close", onClose);
+                    } else if (result.status === "at_capacity" || result.status === "at capacity" || result.status === "queued" ) {
+                        const email = prompt("Our server is at capacity! Enter your email to be notified when it's available again:");
+    
+                        await saveWaitlistEmail(email);
+    
                         router.push("/"); // Redirect to home page
+                        return;
+                    }
+                    else if (response.status !== 202) {
+                        console.log("Unexpected status code:", response.status);
+                        const email = prompt("Something went wrong! Enter your email to be notified when we've got a fix:");
+                        await saveWaitlistEmail(email);
+                        router.push("/new-test");
+                        return;
                     }
                     else{
                         console.log("result status not parsed correctly")
@@ -259,6 +297,26 @@ const makeRunId = () =>
 
     const handleSend = () => {
         if (!input.trim() || !waitingForInput) return;
+
+        // Check if the last message was asking about running another MAS
+        // Cancel the run if the user enters N
+        const lastMessage = messages[messages.length - 1];
+        const isRunAnotherPrompt = lastMessage && 
+            lastMessage.from === "system" && 
+            lastMessage.text.toLowerCase().includes("run another mas");
+        
+        if (isRunAnotherPrompt) {
+            const userResponse = input.trim().toLowerCase();
+            
+            if (userResponse !== "y" && userResponse !== "yes") {
+                // User said N/no or anything else - cancel run
+                console.log("User declined to run another MAS - canceling run");
+                setMessages(prev => [...prev, { from: "user", text: input }]);
+                cancelRun();
+            }
+            return;
+        }
+
         setMessages(prev => [...prev, { from: "user", text: input }]);
         socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
         setInput("");
