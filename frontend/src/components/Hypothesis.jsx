@@ -105,6 +105,40 @@ const makeRunId = () =>
         }
     };
 
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (startedRef.current && runId) {
+                console.log("🚪 Tab closing/reloading, canceling run:", runId);
+                
+                // Use navigator.sendBeacon for reliable delivery during page unload
+                navigator.sendBeacon(
+                    `${API_BASE}/runs/${runId}/cancel`, 
+                    new Blob([JSON.stringify({ runId })], { type: 'application/json' })
+                );
+            }
+        };
+        // Backup method
+        const handleUnload = () => {
+            if (startedRef.current && runId) {
+                console.log("🚪 Page unloading, canceling run:", runId);
+                
+                navigator.sendBeacon(
+                    `${API_BASE}/runs/${runId}/cancel`, 
+                    new Blob([JSON.stringify({ runId })], { type: 'application/json' })
+                );
+            }
+        };
+
+        // Add event listeners for page close/reload
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        window.addEventListener("unload", handleUnload);
+
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+            window.removeEventListener("unload", handleUnload);
+        };
+    }, [API_BASE, runId]);
+
     const processRaw = (raw) => {
         console.log(raw);
         // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
@@ -313,6 +347,7 @@ const makeRunId = () =>
                 console.log("User declined to run another MAS - canceling run");
                 setMessages(prev => [...prev, { from: "user", text: input }]);
                 cancelRun();
+                setWaitingForInput(false);
             }
             return;
         }
