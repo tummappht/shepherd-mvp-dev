@@ -49,13 +49,6 @@ const makeRunId = () =>
         try { window.dispatchEvent(new CustomEvent("mas:runId", { detail: runId })); } catch {}
     }, [runId]);
 
-    // Auto-focus input when waiting for user input
-    useEffect(() => {
-        if (waitingForInput && inputRef.current) {
-            setTimeout(() => inputRef.current?.focus(), 100);
-        }
-    }, [waitingForInput]);
-
     // Optional repo URL from query string
     const searchParams = useSearchParams();
     const repoUrl = searchParams.get("repoUrl");
@@ -78,6 +71,14 @@ const makeRunId = () =>
         if (text) setMessages(prev => [...prev, { from: "system", text }]);
     };
 
+    // Auto-focus input when waiting for user input
+    useEffect(() => {
+        if (waitingForInput && inputRef.current) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
+    }, [waitingForInput]);
+
+    // calls the cancel api and removes this run from the running state
     const cancelRun = async () => {
         try {
             await fetch(`${API_BASE}/runs/${runId}/cancel`, {
@@ -90,6 +91,7 @@ const makeRunId = () =>
         }
     };
 
+    // prompts the user to save their email (call if an unexpected error occurs)
     const saveWaitlistEmail = async (email) => {
         if (email && email.trim()) {
             try {
@@ -105,37 +107,34 @@ const makeRunId = () =>
         }
     };
 
+    // cancels run if the tab closes
     useEffect(() => {
         const handleBeforeUnload = () => {
             if (startedRef.current && runId) {
-                console.log("🚪 Tab closing/reloading, canceling run:", runId);
+                console.log("Tab closing/reloading, canceling run:", runId);
                 
                 // Use navigator.sendBeacon for reliable delivery during page unload
                 navigator.sendBeacon(
                     `${API_BASE}/runs/${runId}/cancel`, 
                     new Blob([JSON.stringify({ runId })], { type: 'application/json' })
                 );
-            }
-        };
-        // Backup method
-        const handleUnload = () => {
-            if (startedRef.current && runId) {
-                console.log("🚪 Page unloading, canceling run:", runId);
-                
-                navigator.sendBeacon(
-                    `${API_BASE}/runs/${runId}/cancel`, 
-                    new Blob([JSON.stringify({ runId })], { type: 'application/json' })
-                );
-            }
+                // Method 2: Backup fetch with keepalive
+                fetch(`${API_BASE}/runs/${runId}/cancel`, {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ runId }),
+                    keepalive: true // Keeps request alive during page unload
+                }).catch(() => {
+                    console.log("Backup fetch failed (expected during reload)");
+                });
+                }
         };
 
         // Add event listeners for page close/reload
         window.addEventListener("beforeunload", handleBeforeUnload);
-        window.addEventListener("unload", handleUnload);
 
         return () => {
             window.removeEventListener("beforeunload", handleBeforeUnload);
-            window.removeEventListener("unload", handleUnload);
         };
     }, [API_BASE, runId]);
 
@@ -186,9 +185,9 @@ const makeRunId = () =>
                     // Send the repo URL automatically
                     socketRef.current.send(JSON.stringify({ type: "input", data: repoUrl }));
                     
-                    console.log("✅ Auto-sent repo URL:", repoUrl);
+                    console.log("Auto-sent repo URL:", repoUrl);
                 } else {
-                    console.error("❌ No repo URL available or WebSocket not connected");
+                    console.error("No repo URL available or WebSocket not connected");
                     applyMessage("Error: No repository URL available");
                     // fallback: ask the user to enter the repo url
                     applyMessage(msg.data?.prompt || "");
@@ -221,11 +220,11 @@ const makeRunId = () =>
         router.push("/"); // Redirect to home page
         return;
         }
-        if (t === "complete") {
-        console.log("user entered N");
-        cancelRun();
-        return;
-        }
+        // if (t === "complete") {
+        // console.log("user entered N");
+        // cancelRun();
+        // return;
+        // }
         if (t === "stderr") {
         const errorMsg = typeof msg.data === "string" ? msg.data.trim() : (msg.data?.message || "An error occurred");
         applyMessage(`Error: ${errorMsg}`);
