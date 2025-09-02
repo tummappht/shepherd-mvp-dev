@@ -206,6 +206,31 @@ const makeRunId = () =>
         applyMessage(msg.data?.message || msg.data || "");
         return;
         }
+        // stream planner information
+        if(t === "planner_step"){
+        applyMessage(msg.data?.content || msg.data || "");
+        return;
+        }
+        // stream planner information
+        if(t === "executor_tool_call"){
+        applyMessage(`Calling tool ${msg.data?.tool_name || "Unknown Tool"}`);
+        return;
+        }
+        // stream tool result information
+        if (t === "executor_tool_result") {
+        const toolName = msg.data?.tool_name || "Tool";
+        const status = msg.data?.status || "unknown";
+        const output = msg.data?.tool_output || "";
+        const errorType = msg.data?.error_type;
+        const reason = msg.data?.reason;
+        
+        if (status === "error" || errorType) {
+            applyMessage(`${toolName}: ERROR - ${errorType || reason || "Unknown error"}`);
+        } else {
+            applyMessage(`${toolName}: ${status} - ${output}`);
+        }
+        return;
+        }
         if (t === "agent") {
         applyMessage(`${msg.data?.agent_type || "Unknown"} agent:\n${msg.data?.content || msg.data || ""}`);
         return;
