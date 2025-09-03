@@ -212,12 +212,12 @@ const makeRunId = () =>
         return;
         }
         // stream planner information
-        if(t === "executor_tool_call"){
+        if(t === "executor-tool-call"){
         applyMessage(`Calling tool ${msg.data?.tool_name || "Unknown Tool"}`);
         return;
         }
         // stream tool result information
-        if (t === "executor_tool_result") {
+        if (t === "executor-tool-result") {
         const toolName = msg.data?.tool_name || "Tool";
         const status = msg.data?.status || "unknown";
         const output = msg.data?.tool_output || "";
