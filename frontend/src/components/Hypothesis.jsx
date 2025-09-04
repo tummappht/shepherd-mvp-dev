@@ -71,12 +71,12 @@ const makeRunId = () =>
         if (text) setMessages(prev => [...prev, { from: "system", text }]);
     };
 
-    // // Auto-focus input when waiting for user input
-    // useEffect(() => {
-    //     if (waitingForInput && inputRef.current) {
-    //         setTimeout(() => inputRef.current?.focus( {preventScroll : true}), 100);
-    //     }
-    // }, [waitingForInput]);
+    // Auto-focus input when waiting for user input
+    useEffect(() => {
+        if (waitingForInput && inputRef.current) {
+            setTimeout(() => inputRef.current?.focus( {preventScroll : true}), 100);
+        }
+    }, [waitingForInput]);
    
     // calls the cancel api and removes this run from the running state
     const cancelRun = async () => {
@@ -158,7 +158,7 @@ const makeRunId = () =>
             const t = inner?.prompt || inner?.message || "";
             if (t) applyMessage(t);
             setWaitingForInput(true);
-            // setTimeout(() => inputRef.current?.focus({preventScroll : true}), 100); // auto focus on the text box
+            setTimeout(() => inputRef.current?.focus({preventScroll : true}), 100); // auto focus on the text box
             return;
             }
         }
@@ -192,13 +192,13 @@ const makeRunId = () =>
                     // fallback: ask the user to enter the repo url
                     applyMessage(msg.data?.prompt || "");
                     setWaitingForInput(true);
-                    // setTimeout(() => inputRef.current?.focus({preventScroll : true}), 100);
+                    setTimeout(() => inputRef.current?.focus({preventScroll : true}), 100);
                 }
                 return;
             }
             applyMessage(msg.data?.prompt || "");
             setWaitingForInput(true);
-            // setTimeout(() => inputRef.current?.focus({preventScroll : true}), 100);
+            setTimeout(() => inputRef.current?.focus({preventScroll : true}), 100);
             return;
         }
         if (t === "description") {
@@ -372,8 +372,8 @@ const makeRunId = () =>
                 setMessages(prev => [...prev, { from: "user", text: input }]);
                 cancelRun();
                 setWaitingForInput(false);
+                return;
             }
-            return;
         }
 
         setMessages(prev => [...prev, { from: "user", text: input }]);
