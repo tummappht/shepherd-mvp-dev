@@ -30,6 +30,7 @@ const makeRunId = () =>
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [waitingForInput, setWaitingForInput] = useState(false);
+    const [runStatus, setRunStatus] = useState("Initializing...");
 
     const messagesEndRef = useRef(null);
     const socketRef = useRef(null);
@@ -318,7 +319,11 @@ const makeRunId = () =>
                         socket.addEventListener("message", onMessage);
                         socket.addEventListener("error", onError);
                         socket.addEventListener("close", onClose);
+                        setRunStatus("Started"); // Change from Initializing... status
+
                     } else if (result.status === "at_capacity" || result.status === "at capacity" || result.status === "queued" ) {
+                        setRunStatus("At capacity");
+
                         const email = prompt("Our server is at capacity! Enter your email to be notified when it's available again:");
     
                         await saveWaitlistEmail(email);
@@ -327,6 +332,8 @@ const makeRunId = () =>
                         return;
                     }
                     else if (response.status !== 202) {
+                        setRunStatus("Error");
+
                         console.log("Unexpected status code:", response.status);
                         const email = prompt("Something went wrong! Enter your email to be notified when we've got a fix:");
                         await saveWaitlistEmail(email);
@@ -334,6 +341,7 @@ const makeRunId = () =>
                         return;
                     }
                     else{
+                        setRunStatus("Error");
                         console.log("result status not parsed correctly")
                     }
                     
@@ -388,6 +396,7 @@ const makeRunId = () =>
             <div className="flex items-center space-x-2">
             <p className="font-semibold">{title}</p>
             <FaEdit className="text-sm text-gray-400" />
+            <span className="text-[#8f8f8f]">{runStatus}</span>
             </div>
             <button onClick={() => onMinimize?.(id)}>
             <FaWindowMinimize className="text-gray-400" />
@@ -400,7 +409,7 @@ const makeRunId = () =>
                 {messages.map((msg, index) => (
                 <div key={index} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
                     <div className={`px-4 py-2 rounded-lg text-sm max-w-xs break-words ${msg.from === "user" ? "bg-[#df153e] text-white" : "bg-[#141414] text-gray-300"}`}>
-                    {msg.text}
+                                {msg.text}
                     </div>
                 </div>
                 ))}

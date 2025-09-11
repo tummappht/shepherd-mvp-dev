@@ -39,6 +39,9 @@ export default function NewTest() {
                     <option value="https://github.com/dhruvjain2905/naive-receiver">
                         https://github.com/dhruvjain2905/naive-receiver
                     </option>
+                    <option value="https://github.com/dhruvjain2905/Truster">
+                        https://github.com/dhruvjain2905/Truster
+                    </option>
                 </select>
 
             </div>
@@ -118,10 +121,10 @@ export default function NewTest() {
                         <button
                             onClick={() => setSelectedEnv(selectedEnv === "testnet" ? null : "testnet")}
                             className={`px-5 py-3 rounded-lg border border-[#232323] ${
-                                selectedEnv === "testnet" ? "bg-[#df153e]" : "bg-[#0C0C0C]"
+                                selectedEnv === "testnet" ? "bg-[#232323]" : "bg-[#232323]"
                             }`}
                         >
-                            Testnet
+                            <p className="text-sm font-semibold text-[#595959]">Testnet</p>
                         </button>
                     </div>
                     <button
