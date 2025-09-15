@@ -71,6 +71,7 @@ const makeRunId = () =>
 
     // ---- message processor (handles tagged envelopes and JSON) ----
     const applyMessage = (text) => {
+        setIsSystemThinking(false);
         if (text) setMessages(prev => [...prev, { from: "system", text }]);
         setRunStatus("Started"); // Change from Initializing... status once the first message is sent
     };
@@ -143,7 +144,6 @@ const makeRunId = () =>
     }, [API_BASE, runId]);
 
     const processRaw = (raw) => {
-        setIsSystemThinking(false);
         console.log(raw);
         // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
         if (typeof raw === "string") {
