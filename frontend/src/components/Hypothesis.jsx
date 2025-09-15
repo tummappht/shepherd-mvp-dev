@@ -70,6 +70,7 @@ const makeRunId = () =>
     // ---- message processor (handles tagged envelopes and JSON) ----
     const applyMessage = (text) => {
         if (text) setMessages(prev => [...prev, { from: "system", text }]);
+        setRunStatus("Started"); // Change from Initializing... status once the first message is sent
     };
 
     // Auto-focus input when waiting for user input
@@ -280,6 +281,9 @@ const makeRunId = () =>
                     }
                     else if(repoUrl.toLowerCase().includes("truster")){
                         fetch_url = `${API_BASE}/runs/dvd3/${runId}`;
+                    }
+                    else if(repoUrl.toLowerCase().includes("unstoppable")){
+                        fetch_url = `${API_BASE}/runs/dvd1/${runId}`;
                     } else {
                         throw new Error(`Unsupported repoUrl: ${repoUrl}`);
                     }
@@ -327,7 +331,6 @@ const makeRunId = () =>
                         socket.addEventListener("message", onMessage);
                         socket.addEventListener("error", onError);
                         socket.addEventListener("close", onClose);
-                        setRunStatus("Started"); // Change from Initializing... status
 
                     } else if (result.status === "at_capacity" || result.status === "at capacity" || result.status === "queued" ) {
                         setRunStatus("At capacity");
