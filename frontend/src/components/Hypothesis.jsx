@@ -31,6 +31,8 @@ const makeRunId = () =>
     const [input, setInput] = useState("");
     const [waitingForInput, setWaitingForInput] = useState(false);
     const [runStatus, setRunStatus] = useState("Initializing...");
+    const [isSystemThinking, setIsSystemThinking] = useState(true);
+
 
     const messagesEndRef = useRef(null);
     const socketRef = useRef(null);
@@ -141,6 +143,7 @@ const makeRunId = () =>
     }, [API_BASE, runId]);
 
     const processRaw = (raw) => {
+        setIsSystemThinking(false);
         console.log(raw);
         // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
         if (typeof raw === "string") {
@@ -407,6 +410,7 @@ const makeRunId = () =>
         socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
         setInput("");
         setWaitingForInput(false);
+        setIsSystemThinking(true);
     };
 
     return (
@@ -432,6 +436,19 @@ const makeRunId = () =>
                     </div>
                 </div>
                 ))}
+                {isSystemThinking && !waitingForInput && (
+                    <div className="flex justify-start">
+                        <div className="px-4 py-2 rounded-lg text-sm bg-[#141414] text-gray-300">
+                            <div className="flex space-x-1 items-center">
+                                <div className="flex space-x-1 ml-2">
+                                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div ref={messagesEndRef} />
             </div>
 
