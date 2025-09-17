@@ -84,13 +84,15 @@ const makeRunId = () =>
     }, [waitingForInput]);
    
     // calls the cancel api and removes this run from the running state
-    const cancelRun = async () => {
-        try {
+    const cancelRun = async (delayMs = 5000) => {
+        try {            
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            
             await fetch(`${API_BASE}/runs/${runId}/cancel`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
             });
-            console.log("Run canceled")
+            // console.log("Run canceled")
         } catch (error) {
             console.error("Failed to cancel run:", error);
         }
@@ -399,6 +401,7 @@ const makeRunId = () =>
                 console.log("User declined to run another MAS - canceling run");
                 setMessages(prev => [...prev, { from: "user", text: input }]);
                 setInput("");
+                console.log("CANCELING");
                 applyMessage("Session has ended successfully.");
                 cancelRun();
                 setWaitingForInput(false);
