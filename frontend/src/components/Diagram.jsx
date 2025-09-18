@@ -425,7 +425,7 @@ export default function Diagram({ runId: runIdProp }) {
 
   return (
     <div
-      className="w-full h-[600px] bg-[#0C0C0C] bg-[radial-gradient(circle,_#1e293b_1px,_transparent_1px)] [background-size:20px_20px] rounded-lg shadow-md"
+      className="w-full h-full bg-surface bg-[radial-gradient(circle,_#1e293b_1px,_transparent_1px)] [background-size:20px_20px] rounded-lg shadow-md overflow-auto"
       ref={containerRef}
     />
   );
