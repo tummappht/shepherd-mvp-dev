@@ -389,6 +389,7 @@ const makeRunId = () =>
 
         // Check if the last message was asking about running another MAS
         // Cancel the run if the user enters N
+
         const isRunAnotherPrompt = lastMessage && 
             lastMessage.from === "system" && 
             lastMessage.text.toLowerCase().includes("run another mas");
@@ -400,8 +401,9 @@ const makeRunId = () =>
                 // User said N/no or anything else - cancel run
                 console.log("User declined to run another MAS - canceling run");
                 setMessages(prev => [...prev, { from: "user", text: input }]);
-                setInput("");
                 console.log("CANCELING");
+                socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
+                setInput("");
                 applyMessage("Session has ended successfully.");
                 cancelRun();
                 setWaitingForInput(false);
