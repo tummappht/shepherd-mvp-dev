@@ -22,7 +22,7 @@ export default function HypothesisManager() {
   const allMinimized = hypotheses.every((h) => h.minimized);
 
   return (
-    <div className="flex flex-col h-full max-h-full space-y-4 overflow-hidden">
+    <div className="flex flex-col h-full max-h-full gap-4 overflow-hidden">
       {hypotheses.map((h) => (
         <Hypothesis
           key={h.id}
@@ -35,6 +35,7 @@ export default function HypothesisManager() {
 
       {allMinimized && (
         <button
+          type="button"
           onClick={addHypothesis}
           className="self-end bg-primary text-white rounded-full p-3 hover:scale-105 absolute bottom-4 right-4 transition-transform"
         >

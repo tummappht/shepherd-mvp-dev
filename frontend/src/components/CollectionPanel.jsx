@@ -20,7 +20,10 @@ export default function CollectionPanel({
         </div>
         {href ? (
           <Link href={href}>
-            <button className="bg-primary hover:bg-primary-hover px-4 py-2 rounded-lg transition-all">
+            <button
+              type="button"
+              className="bg-primary hover:bg-primary-hover px-4 py-2 rounded-lg transition-all"
+            >
               +
             </button>
           </Link>

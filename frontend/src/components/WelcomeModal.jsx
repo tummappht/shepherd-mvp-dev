@@ -68,7 +68,8 @@ export default function WelcomeModal() {
 
         <div className="mt-6 flex justify-center items-center gap-3">
           <button
-            className="px-4 py-2 rounded-md border border-gray-border hover:bg-white/5 transition-all"
+            type="button"
+            className="w-full px-4 py-2 rounded-md border border-gray-border hover:bg-white/5 transition-all"
             onClick={() => setShowModal(false)}
           >
             Dismiss
