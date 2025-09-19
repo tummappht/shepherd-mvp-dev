@@ -12,9 +12,7 @@ export default function RootLayout({ children }) {
       <body className="h-screen">
         <div className="flex flex-col h-full">
           <Header />
-          <main className="flex-1 relative overflow-auto bg-black">
-            {children}
-          </main>
+          <main className="flex-1 relative bg-black">{children}</main>
           <Footer />
         </div>
       </body>

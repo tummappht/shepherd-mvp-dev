@@ -16,7 +16,7 @@ export default function Header() {
             />
           </Link>
         </div>
-        <div className="flex flex-row space-x-2 items-center">
+        <div className="flex flex-row gap-2 items-center">
           <Image
             src="/images/pfp.png"
             height={30}

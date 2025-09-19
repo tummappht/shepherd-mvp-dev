@@ -81,7 +81,10 @@ export default function NewTest() {
             className="w-full p-4 h-36 border border-gray-border rounded-md bg-surface text-[#595959] placeholder-[#595959] placeholder:italic"
             placeholder="Insert documentation..."
           />
-          <button className="w-fit flex flex-row items-center justify-center px-4 py-2 space-x-2 rounded-lg bg-primary hover:bg-primary-hover transition-all">
+          <button
+            type="button"
+            className="w-fit flex flex-row items-center justify-center px-4 py-2 gap-2 rounded-lg bg-primary hover:bg-primary-hover transition-all"
+          >
             <Image src="/images/she.png" height={20} width={20} alt="Upload" />
             <p className="text-sm font-semibold">Upload White Paper</p>
           </button>
@@ -95,7 +98,7 @@ export default function NewTest() {
             </p>
           </div>
           {attachedReference ? (
-            <div className="w-fit flex flex-row px-4 py-2 rounded-lg space-x-2 items-center bg-surface border border-gray-border">
+            <div className="w-fit flex flex-row px-4 py-2 rounded-lg gap-2 items-center bg-surface border border-gray-border">
               <Image
                 src="/images/defi.png"
                 width={35}
@@ -104,13 +107,14 @@ export default function NewTest() {
               />
               <Image src="/images/file.png" width={20} height={20} alt="File" />
               <p className="text-sm">{selectedReference}</p>
-              <button onClick={() => setAttachedReference(null)}>
+              <button type="button" onClick={() => setAttachedReference(null)}>
                 <Image src="/images/x.png" alt="Close" width={16} height={16} />
               </button>
             </div>
           ) : (
             <button
-              className="w-fit flex flex-row items-center justify-center px-4 py-1 space-x-2 rounded-lg bg-gray-border"
+              type="button"
+              className="w-fit flex flex-row items-center justify-center px-4 py-1 gap-2 rounded-lg bg-gray-border"
               onClick={() => setShowRef(true)}
             >
               <p className="text-lg text-[#595959]">+</p>
@@ -131,11 +135,11 @@ export default function NewTest() {
             </div>
           </div>
           <div className="flex flex-row justify-between items-center">
-            <div className="flex flex-row space-x-3">
+            <div className="flex flex-row gap-3">
               <button
                 type="button"
                 onClick={() => handleEnvChange("local")}
-                className={`w-fit px-4 py-1 rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center space-x-3 ${
+                className={`w-fit px-4 py-1 rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                   selectedEnv === "local"
                     ? "bg-primary border-primary text-white"
                     : "bg-surface border-gray-border text-gray-300 hover:bg-surface-hover hover:border-gray-400"
@@ -167,7 +171,7 @@ export default function NewTest() {
               <button
                 type="button"
                 onClick={() => handleEnvChange("testnet")}
-                className={`w-fit px-4 py-1 rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center space-x-3 ${
+                className={`w-fit px-4 py-1 rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                   selectedEnv === "testnet"
                     ? "bg-primary border-primary text-white"
                     : "bg-surface border-gray-border text-gray-300 hover:bg-surface-hover"
@@ -208,7 +212,7 @@ export default function NewTest() {
             </button>
             <button
               type="submit"
-              className="bg-primary hover:bg-primary-hover px-6 py-3 rounded-lg transition-all"
+              className="bg-primary hover:bg-primary-hover border-2 border-primary hover:border-primary-hover px-6 py-3 rounded-lg transition-all"
             >
               Next
             </button>
@@ -218,15 +222,16 @@ export default function NewTest() {
       {showRef && (
         <ModalWrapper>
           <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-            <div className="relative flex flex-col px-8 py-4 bg-surface border border-gray-border space-y-4 rounded-lg w-full max-w-lg">
+            <div className="relative flex flex-col px-8 py-4 bg-surface border border-gray-border gap-4 rounded-lg w-full max-w-lg">
               <button
+                type="button"
                 onClick={() => setShowRef(false)}
                 className="absolute top-4 right-4"
               >
                 <Image src="/images/x.png" alt="Close" width={16} height={16} />
               </button>
 
-              <div className="flex flex-col space-y-1">
+              <div className="flex flex-col gap-1">
                 <p className="text-md font-semibold">References</p>
                 <p className="text-secondary">
                   Identify smart contracts with similar vulnerabilities to
@@ -240,7 +245,8 @@ export default function NewTest() {
               />
 
               <button
-                className="bg-primary hover:bg-primary-hover w-fit flex flex-row items-center justify-center px-4 py-2 space-x-2 rounded-lg text-sm transition-all"
+                type="button"
+                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-sm transition-all"
                 onClick={handleAttach}
               >
                 Attach

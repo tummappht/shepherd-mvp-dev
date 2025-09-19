@@ -477,19 +477,19 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
       }`}
     >
       <div className="flex justify-between items-center px-4 py-2 bg-[#141414] rounded-t-lg">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <p className="font-semibold">{title}</p>
           <FaEdit className="text-sm text-gray-400" />
           <span className="text-secondary">{runStatus}</span>
         </div>
-        <button onClick={() => onMinimize?.(id)}>
+        <button type="button" onClick={() => onMinimize?.(id)}>
           <FaWindowMinimize className="text-gray-400" />
         </button>
       </div>
 
       {!minimized && (
         <div className="flex flex-col flex-1 px-4 py-4 min-h-0">
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+          <div className="flex-1 overflow-y-auto gap-2 pr-2">
             {messages.map((msg, index) => (
               <div
                 key={index}
