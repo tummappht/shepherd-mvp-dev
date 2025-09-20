@@ -37,7 +37,7 @@ export default function HypothesisManager() {
         <button
           type="button"
           onClick={addHypothesis}
-          className="self-end bg-primary text-white rounded-full p-3 hover:scale-105 absolute bottom-4 right-4 transition-transform"
+          className="bg-primary bottom-4 flex hover:scale-105 justify-center p-3 right-4 rounded-lg self-end text-white transition-transform"
         >
           <FaPlus />
         </button>
