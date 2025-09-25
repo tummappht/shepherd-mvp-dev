@@ -1,34 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
-import { FaEdit, FaWindowMinimize } from "react-icons/fa";
+import { useState, useEffect, useRef } from "react";
+import { FaEdit, FaSyncAlt, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams, useRouter } from "next/navigation";
-
-/* ---------- helpers ---------- */
-
-const makeRunId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `run-${Date.now().toString(36)}-${Math.random()
-        .toString(36)
-        .slice(2, 10)}`;
-
-function getSingletonWS(url) {
-  if (typeof window === "undefined") return new WebSocket(url);
-  const pool = (window.__masWsPool ||= new Map());
-  const existing = pool.get(url);
-  if (existing && existing.readyState < 2) return existing; // 0 CONNECTING, 1 OPEN
-  const ws = new WebSocket(url);
-  pool.set(url, ws);
-  ws.addEventListener("close", () => {
-    if (pool.get(url) === ws) pool.delete(url);
-  });
-  return ws;
-}
-
-/* ---------- component ---------- */
+import { useRuns } from "@/hook/useRuns";
 
 export default function Hypothesis({ id, title, onMinimize, minimized }) {
+  const { API_BASE, runId, getSingletonWS, socketUrl } = useRuns();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [waitingForInput, setWaitingForInput] = useState(false);
@@ -39,43 +17,13 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
   const socketRef = useRef(null);
   const startedRef = useRef(false);
 
-  // Stable run id across re-renders
-  const runIdRef = useRef(makeRunId());
-  const runId = runIdRef.current;
-
   // Define a router to redirect to different pages
   const router = useRouter();
   const inputRef = useRef(null);
 
-  // Publish runId so Diagram (or others) can reuse it
-  useEffect(() => {
-    try {
-      localStorage.setItem("masRunId", runId);
-    } catch {}
-    try {
-      window.dispatchEvent(new CustomEvent("mas:runId", { detail: runId }));
-    } catch {}
-  }, [runId]);
-
   // Optional repo URL from query string
   const searchParams = useSearchParams();
   const repoUrl = searchParams.get("repoUrl");
-
-  // Backend base (env or fallback)
-  const API_BASE = useMemo(() => {
-    return (
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "https://shepherd-mas-dev.fly.dev/"
-    ).replace(/\/+$/, "");
-  }, []);
-
-  // ws(s)://.../ws/{runId}
-  const socketUrl = useMemo(() => {
-    const u = new URL(API_BASE);
-    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-    u.pathname = u.pathname.replace(/\/$/, "") + `/ws/${runId}`;
-    return u.toString();
-  }, [API_BASE, runId]);
 
   // ---- message processor (handles tagged envelopes and JSON) ----
   const applyMessage = (text) => {

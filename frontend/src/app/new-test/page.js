@@ -4,14 +4,29 @@ import { useRouter } from "next/navigation";
 import References from "@/components/References";
 import ModalWrapper from "@/components/ModalWrapper";
 import { useState } from "react";
+import FileDropZone from "@/components/FileDropZone";
+import Card, {
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from "@/components/Card";
+import { FaRegBookmark, FaRegFileAlt, FaTimes, FaUpload } from "react-icons/fa";
+import { useRuns } from "@/hook/useRuns";
+import { useForm, Controller } from "react-hook-form";
 
 export default function NewTest() {
   const [showRef, setShowRef] = useState(false);
   const [selectedReference, setSelectedReference] = useState(null);
   const [attachedReference, setAttachedReference] = useState(null);
-  const [selectedEnv, setSelectedEnv] = useState(null);
-  const [repoUrl, setRepoUrl] = useState("");
+
   const router = useRouter();
+  const { handleStartRun } = useRuns();
+  const {
+    control,
+    handleSubmit,
+    register,
+    formState: { errors },
+  } = useForm();
 
   const handleAttach = () => {
     if (selectedReference) {
@@ -20,203 +35,236 @@ export default function NewTest() {
     }
   };
 
-  const handleEnvChange = (env) => {
-    setSelectedEnv(selectedEnv === env ? null : env);
-  };
+  const onSubmit = async (data) => {
+    const formData = new FormData();
+    formData.append("tunnel-url", data.tunnelUrl);
+    formData.append("github-url", data.githubUrl);
+    formData.append("project-description", data.projectDescription);
+    formData.append("environment", data.environment);
+    if (data.contactAsset?.[0]) {
+      formData.append("assets", data.contactAsset[0]);
+    }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
+    if (Array.isArray(data.whitePaper)) {
+      data.whitePaper.forEach((file, idx) => {
+        formData.append(`whitePaper[${idx}]`, file);
+      });
+    } else if (data.whitePaper?.[0]) {
+      formData.append("whitePaper", data.whitePaper[0]);
+    }
+
+    const res = await handleStartRun(formData);
+    const repoUrl = res?.job_data?.github_url || "";
+    if (repoUrl.length > 0) {
+      router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
+    } else {
+      alert("Error starting the run. Please try again.");
+    }
   };
 
   return (
     <>
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className="container mx-auto flex flex-col gap-8 py-8 px-4"
       >
-        <div className="flex flex-col gap-4">
-          <div className="w-full flex flex-row justify-between items-center">
-            <div className="flex flex-col">
-              <p className="text-md font-semibold">Repository URL</p>
-              <p className="text-secondary">
-                Insert the repository link you&apos;d like to explore
-              </p>
+        <Card
+          title="Upload Repository"
+          description="Please upload your repository as a .zip file for analysis."
+        >
+          <div className="flex items-center gap-2">
+            <FaUpload />
+            <CardTitle className="mb-0">Upload Repository</CardTitle>
+          </div>
+          <CardDescription>
+            Please upload your repository as a .zip file for analysis.
+          </CardDescription>
+          <CardContent className="flex flex-col gap-4">
+            <div>
+              <p className="mb-2">Contract Asset</p>
+              <Controller
+                control={control}
+                name="contactAsset"
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <FileDropZone
+                    acceptedFileTypes=".zip"
+                    maxFileSize={50 * 1024 * 1024} // 50MB
+                    maxFiles={1}
+                    {...field}
+                  />
+                )}
+              />
+              {errors.contactAsset && (
+                <span className="text-red-500 text-xs">
+                  Please upload a contract asset zip file.
+                </span>
+              )}
             </div>
+            <div>
+              <p className="mb-2">Tunnel URL</p>
+              <input
+                type="text"
+                placeholder="Tunnel URL"
+                className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
+                {...register("tunnelUrl", { required: true })}
+                aria-invalid={errors.tunnelUrl ? "true" : "false"}
+              />
+              {errors.tunnelUrl && (
+                <span className="text-red-500 text-xs">
+                  This field is required
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="mb-2">Github URL</p>
+              <input
+                type="text"
+                placeholder="Github URL"
+                className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
+                {...register("githubUrl", { required: true })}
+                aria-invalid={errors.githubUrl ? "true" : "false"}
+              />
+              {errors.githubUrl && (
+                <span className="text-red-500 text-xs">
+                  This field is required
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2">
+            <FaRegFileAlt />
+            <CardTitle className="mb-0">Project description</CardTitle>
           </div>
-          <select
-            name="repoUrl"
-            className="w-full p-4 border border-gray-border rounded-md bg-surface text-[#e5e7eb]"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            required
-          >
-            <option value="" disabled>
-              Choose repository…
-            </option>
-            <option value="https://github.com/dhruvjain2905/naive-receiver">
-              https://github.com/dhruvjain2905/naive-receiver
-            </option>
-            <option value="https://github.com/dhruvjain2905/Truster">
-              https://github.com/dhruvjain2905/Truster
-            </option>
-            <option value="https://github.com/dhruvjain2905/Unstoppable">
-              https://github.com/dhruvjain2905/Unstoppable
-            </option>
-            <option value="https://github.com/tunonraksa/puppet-deploy">
-              https://github.com/tunonraksa/puppet-deploy
-            </option>
-          </select>
-        </div>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col">
-            <p className="text-md font-semibold">Project description</p>
-            <p className="text-secondary">
-              Please provide the protocol documentation to help better inform
-              the repository.
-            </p>
+          <CardDescription>
+            Please provide the protocol documentation to help better inform the
+            repository.
+          </CardDescription>
+          <CardContent className="flex flex-col gap-4">
+            <div>
+              <p className="mb-2">Description</p>
+              <textarea
+                className="w-full py-2 px-3 h-36 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
+                placeholder="Insert documentation..."
+                {...register("projectDescription", { required: true })}
+                aria-invalid={errors.projectDescription ? "true" : "false"}
+              />
+              {errors.projectDescription && (
+                <span className="text-red-500 text-xs">
+                  This field is required
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="mb-2">White Paper (Optical)</p>
+              <Controller
+                control={control}
+                name="whitePaper"
+                render={({ field }) => (
+                  <FileDropZone
+                    size="small"
+                    acceptedFileTypes=".pdf,.doc,.docx"
+                    maxFileSize={50 * 1024 * 1024} // 50MB
+                    multiple
+                    {...field}
+                  />
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2">
+            <FaRegBookmark />
+            <CardTitle className="mb-0">Attach Reference</CardTitle>
           </div>
-          <textarea
-            name="projectDescription"
-            className="w-full p-4 h-36 border border-gray-border rounded-md bg-surface text-[#595959] placeholder-[#595959] placeholder:italic"
-            placeholder="Insert documentation..."
-          />
+          <CardDescription>
+            Attach related contracts you&apos;ve ref to inform vulnerability
+            exploration.
+          </CardDescription>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              {attachedReference ? (
+                <div className="flex items-center justify-between p-3 bg-surface border border-gray-border rounded-lg hover:bg-surface-hover transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/images/defi.png"
+                      width={35}
+                      height={35}
+                      alt="DeFiHackLabs"
+                    />
+                    <Image
+                      src="/images/file.png"
+                      width={20}
+                      height={20}
+                      alt="File"
+                    />
+                    <p className="text-sm">{selectedReference}</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setAttachedReference(null)}
+                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                    title="Remove file"
+                  >
+                    <FaTimes className="text-sm" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="w-full flex flex-row items-center justify-center px-4 py-1 gap-2 rounded-lg bg-gray-border"
+                  onClick={() => setShowRef(true)}
+                >
+                  <p className="text-lg text-helper">+</p>
+                  <p className="text-sm font-semibold text-helper">
+                    Attach Files
+                  </p>
+                </button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2">
+            <FaRegFileAlt />
+            <CardTitle className="mb-0">Select an Environment</CardTitle>
+          </div>
+          <CardDescription>
+            Please select the environment where you&apos;d like to deploy the
+            smart contracts from the repository indicated.
+          </CardDescription>
+          <CardContent>
+            <select
+              className="w-full py-2 px-4 border border-gray-border rounded-md bg-surface text-foreground"
+              {...register("environment", { required: true })}
+              aria-invalid={errors.environment ? "true" : "false"}
+            >
+              <option value="" disabled>
+                Choose environment…
+              </option>
+              <option value="local">Local</option>
+              <option value="testnet">Testnet</option>
+            </select>
+          </CardContent>
+        </Card>
+        <div className="flex flex-row justify-end items-center gap-4">
           <button
             type="button"
-            className="w-fit flex flex-row items-center justify-center px-4 py-2 gap-2 rounded-lg bg-primary hover:bg-primary-hover transition-all"
+            onClick={() => router.back()}
+            className="border-2 bg-surface border-gray-border text-gray-300 hover:bg-surface-hover px-6 py-3 rounded-lg transition-all"
           >
-            <Image src="/images/she.png" height={20} width={20} alt="Upload" />
-            <p className="text-sm font-semibold">Upload White Paper</p>
+            Back
           </button>
-        </div>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col">
-            <p className="text-md font-semibold">Attach Reference</p>
-            <p className="text-secondary">
-              Attach related contracts you&apos;ve ref to inform vulnerability
-              exploration.
-            </p>
-          </div>
-          {attachedReference ? (
-            <div className="w-fit flex flex-row px-4 py-2 rounded-lg gap-2 items-center bg-surface border border-gray-border">
-              <Image
-                src="/images/defi.png"
-                width={35}
-                height={35}
-                alt="DeFiHackLabs"
-              />
-              <Image src="/images/file.png" width={20} height={20} alt="File" />
-              <p className="text-sm">{selectedReference}</p>
-              <button type="button" onClick={() => setAttachedReference(null)}>
-                <Image src="/images/x.png" alt="Close" width={16} height={16} />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="w-fit flex flex-row items-center justify-center px-4 py-1 gap-2 rounded-lg bg-gray-border"
-              onClick={() => setShowRef(true)}
-            >
-              <p className="text-lg text-[#595959]">+</p>
-              <p className="text-sm font-semibold text-[#595959]">
-                Attach Files
-              </p>
-            </button>
-          )}
-        </div>
-        <div className="flex flex-col gap-4">
-          <div className="w-full flex flex-row justify-between items-center">
-            <div className="flex flex-col">
-              <p className="text-md font-semibold">Select an Environment</p>
-              <p className="text-secondary">
-                Please select the environment where you&apos;d like to deploy
-                the smart contracts from the repository indicated.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-row justify-between items-center">
-            <div className="flex flex-row gap-3">
-              <button
-                type="button"
-                onClick={() => handleEnvChange("local")}
-                className={`w-fit px-4 py-1 rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center gap-3 ${
-                  selectedEnv === "local"
-                    ? "bg-primary border-primary text-white"
-                    : "bg-surface border-gray-border text-gray-300 hover:bg-surface-hover hover:border-gray-400"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                    selectedEnv === "local"
-                      ? "bg-white border-white"
-                      : "border-gray-400"
-                  }`}
-                >
-                  {selectedEnv === "local" && (
-                    <svg
-                      className="w-3 h-3 text-primary"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-sm font-semibold">Local</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleEnvChange("testnet")}
-                className={`w-fit px-4 py-1 rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center gap-3 ${
-                  selectedEnv === "testnet"
-                    ? "bg-primary border-primary text-white"
-                    : "bg-surface border-gray-border text-gray-300 hover:bg-surface-hover"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                    selectedEnv === "testnet"
-                      ? "bg-white border-white"
-                      : "border-gray-400"
-                  }`}
-                >
-                  {selectedEnv === "testnet" && (
-                    <svg
-                      className="w-3 h-3 text-primary"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-sm font-semibold">Testnet</span>
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-row justify-end items-center gap-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="border-2 bg-surface border-gray-border text-gray-300 hover:bg-surface-hover px-6 py-3 rounded-lg transition-all"
-            >
-              Back
-            </button>
-            <button
-              type="submit"
-              className="bg-primary hover:bg-primary-hover border-2 border-primary hover:border-primary-hover px-6 py-3 rounded-lg transition-all"
-            >
-              Next
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="bg-primary hover:bg-primary-hover border-2 border-primary hover:border-primary-hover px-6 py-3 rounded-lg transition-all"
+          >
+            Next
+          </button>
         </div>
       </form>
       {showRef && (

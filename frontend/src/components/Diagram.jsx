@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
+import { useRuns } from "@/hook/useRuns";
 
 /* ---------------- singleton WS by URL ---------------- */
 function getSingletonWS(url) {
@@ -65,45 +66,11 @@ function agentLabelFromData(data) {
 
 /* ---------------- component ---------------- */
 export default function Diagram({ runId: runIdProp }) {
+  const { API_BASE, runId, socketUrl } = useRuns();
   const containerRef = useRef(null);
   const cyRef = useRef(null);
   const centerRef = useRef({ x: 300, y: 200 }); // fallback center
   const orderCounterRef = useRef(0); // for stable contract ordering
-
-  // Resolve runId: prop > localStorage > broadcast event
-  const [runId, setRunId] = useState(runIdProp || null);
-  useEffect(() => {
-    if (runIdProp) {
-      setRunId(runIdProp);
-      return;
-    }
-    try {
-      const v = localStorage.getItem("masRunId");
-      if (v) setRunId(v);
-    } catch {}
-    const onRunId = (e) => {
-      if (e?.detail) setRunId(e.detail);
-    };
-    window.addEventListener("mas:runId", onRunId);
-    return () => window.removeEventListener("mas:runId", onRunId);
-  }, [runIdProp]);
-
-  // Backend base
-  const API_BASE = useMemo(() => {
-    return (
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "https://shepherd-mas-dev.fly.dev/"
-    ).replace(/\/+$/, "");
-  }, []);
-
-  // ws(s)://.../ws/{runId}
-  const socketUrl = useMemo(() => {
-    if (!runId) return null;
-    const u = new URL(API_BASE);
-    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-    u.pathname = u.pathname.replace(/\/$/, "") + `/ws/${runId}`;
-    return u.toString();
-  }, [API_BASE, runId]);
 
   // Init Cytoscape once
   useEffect(() => {

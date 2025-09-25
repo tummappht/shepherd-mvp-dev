@@ -16,6 +16,7 @@ module.exports = {
         "gray-border": "#232323",
         surface: "#0C0C0C",
         "surface-hover": "#1A1A1A",
+        helper: "#595959",
       },
     },
   },
