@@ -67,7 +67,7 @@ export const useRuns = () => {
 
   const handleStartRun = async (formData) => {
     try {
-      const response = await fetch(`${API_BASE}runs/${runId}`, {
+      const response = await fetch(`${API_BASE}/runs/${runId}`, {
         method: "POST",
         headers: {
           accept: "application/json",
