@@ -44,29 +44,35 @@ export default function NewTest() {
 
   const onSubmit = async (data) => {
     setIsLoading(true);
-    const formData = new FormData();
-    formData.append("tunnel_url", data.tunnelUrl);
-    formData.append("github_url", data.githubUrl);
-    formData.append("project_description", data.projectDescription);
-    formData.append("environment", data.environment);
-    if (data.contactAsset?.[0]) {
-      formData.append("assets", data.contactAsset[0]);
+    try {
+      const formData = new FormData();
+      formData.append("tunnel_url", data.tunnelUrl);
+      formData.append("github_url", data.githubUrl);
+      formData.append("project_description", data.projectDescription);
+      formData.append("environment", data.environment);
+      if (data.contactAsset?.[0]) {
+        formData.append("assets", data.contactAsset[0]);
+      }
+
+      if (Array.isArray(data.whitePaper)) {
+        data.whitePaper.forEach((file, idx) => {
+          formData.append(`whitePaper[${idx}]`, file);
+        });
+      } else if (data.whitePaper?.[0]) {
+        formData.append("whitePaper", data.whitePaper[0]);
+      }
+
+      const res = await handleStartRun(formData);
+      const status = res?.status || "Error";
+      const repoUrl = res?.job_data?.github_url || "";
+
+      setSocketStatus(status);
+      router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
+    } catch (error) {
+      console.error("Error during form submission:", error);
+      alert("An error occurred while submitting the form. Please try again.");
+      setIsLoading(false);
     }
-
-    if (Array.isArray(data.whitePaper)) {
-      data.whitePaper.forEach((file, idx) => {
-        formData.append(`whitePaper[${idx}]`, file);
-      });
-    } else if (data.whitePaper?.[0]) {
-      formData.append("whitePaper", data.whitePaper[0]);
-    }
-
-    const res = await handleStartRun(formData);
-    const status = res?.status || "Error";
-    const repoUrl = res?.job_data?.github_url || "";
-
-    setSocketStatus(status);
-    router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
   };
 
   return (
