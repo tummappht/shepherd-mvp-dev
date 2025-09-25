@@ -262,21 +262,21 @@ export default function NewTest() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="border-2 bg-surface border-gray-border text-gray-300 hover:bg-surface-hover px-6 py-3 rounded-lg transition-all"
+            className="border-2 bg-surface border-gray-border text-gray-300 hover:bg-surface-hover w-24 h-12 rounded-lg transition-all"
           >
             Back
           </button>
           <button
             type="submit"
-            className={`border-2 px-6 py-3 rounded-lg transition-all ${
+            className={`border-2 rounded-lg transition-all h-12 w-24 ${
               !isLoading
                 ? "bg-primary hover:bg-primary-hover border-primary hover:border-primary-hover"
-                : "bg-gray-500 pointer-events-none cursor-not-allowed"
+                : "bg-gray-500 border-gray-500 cursor-not-allowed"
             }`}
             disabled={isLoading}
           >
             {isLoading ? (
-              <FaSyncAlt className="animate-spin mx-auto" />
+              <FaSyncAlt className="animate-spin mx-auto text-base" />
             ) : (
               "Next"
             )}
