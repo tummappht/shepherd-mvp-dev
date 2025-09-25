@@ -1,6 +1,7 @@
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { SocketStatusProvider } from "@/context/SocketStatusContext";
 
 export const metadata = {
   title: "Shepherd Security",
@@ -12,7 +13,9 @@ export default function RootLayout({ children }) {
       <body className="h-screen">
         <div className="flex flex-col h-full">
           <Header />
-          <main className="flex-1 relative bg-black">{children}</main>
+          <SocketStatusProvider>
+            <main className="flex-1 relative bg-black">{children}</main>
+          </SocketStatusProvider>
           <Footer />
         </div>
       </body>

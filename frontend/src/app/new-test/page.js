@@ -10,7 +10,13 @@ import Card, {
   CardDescription,
   CardTitle,
 } from "@/components/Card";
-import { FaRegBookmark, FaRegFileAlt, FaTimes, FaUpload } from "react-icons/fa";
+import {
+  FaRegBookmark,
+  FaRegFileAlt,
+  FaSyncAlt,
+  FaTimes,
+  FaUpload,
+} from "react-icons/fa";
 import { useRuns } from "@/hook/useRuns";
 import { useForm, Controller } from "react-hook-form";
 
@@ -18,9 +24,10 @@ export default function NewTest() {
   const [showRef, setShowRef] = useState(false);
   const [selectedReference, setSelectedReference] = useState(null);
   const [attachedReference, setAttachedReference] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-  const { handleStartRun } = useRuns();
+  const { handleStartRun, setSocketStatus } = useRuns();
   const {
     control,
     handleSubmit,
@@ -36,10 +43,11 @@ export default function NewTest() {
   };
 
   const onSubmit = async (data) => {
+    setIsLoading(true);
     const formData = new FormData();
-    formData.append("tunnel-url", data.tunnelUrl);
-    formData.append("github-url", data.githubUrl);
-    formData.append("project-description", data.projectDescription);
+    formData.append("tunnel_url", data.tunnelUrl);
+    formData.append("github_url", data.githubUrl);
+    formData.append("project_description", data.projectDescription);
     formData.append("environment", data.environment);
     if (data.contactAsset?.[0]) {
       formData.append("assets", data.contactAsset[0]);
@@ -54,12 +62,11 @@ export default function NewTest() {
     }
 
     const res = await handleStartRun(formData);
+    const status = res?.status || "Error";
     const repoUrl = res?.job_data?.github_url || "";
-    if (repoUrl.length > 0) {
-      router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
-    } else {
-      alert("Error starting the run. Please try again.");
-    }
+
+    setSocketStatus(status);
+    router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
   };
 
   return (
@@ -261,9 +268,18 @@ export default function NewTest() {
           </button>
           <button
             type="submit"
-            className="bg-primary hover:bg-primary-hover border-2 border-primary hover:border-primary-hover px-6 py-3 rounded-lg transition-all"
+            className={`border-2 px-6 py-3 rounded-lg transition-all ${
+              !isLoading
+                ? "bg-primary hover:bg-primary-hover border-primary hover:border-primary-hover"
+                : "bg-gray-500 pointer-events-none cursor-not-allowed"
+            }`}
+            disabled={isLoading}
           >
-            Next
+            {isLoading ? (
+              <FaSyncAlt className="animate-spin mx-auto" />
+            ) : (
+              "Next"
+            )}
           </button>
         </div>
       </form>

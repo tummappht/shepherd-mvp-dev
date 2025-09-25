@@ -6,7 +6,13 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useRuns } from "@/hook/useRuns";
 
 export default function Hypothesis({ id, title, onMinimize, minimized }) {
-  const { API_BASE, runId, getSingletonWS, socketUrl } = useRuns();
+  const {
+    API_BASE,
+    runId,
+    getSingletonWS,
+    socketUrl,
+    socketStatus: contextSocketStatus,
+  } = useRuns();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [waitingForInput, setWaitingForInput] = useState(false);
@@ -42,6 +48,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
   // calls the cancel api and removes this run from the running state
   const cancelRun = async (delayMs = 5000) => {
     try {
+      console.log("🚀 ~ cancelRun ~ delayMs:", delayMs);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
 
       await fetch(`${API_BASE}/runs/${runId}/cancel`, {
@@ -56,7 +63,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
   // prompts the user to save their email (call if an unexpected error occurs)
   const saveWaitlistEmail = async (email) => {
-    if (email && email.trim()) {
+    if (email?.trim()) {
       try {
         await fetch(`${API_BASE}/save-waitlist-email`, {
           method: "POST",
@@ -118,7 +125,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
         if (tagLower === "description") {
           applyMessage(inner?.message || inner?.text || "");
-          cancelRun();
+          cancelRun(501);
           return;
         }
         if (tagLower === "prompt") {
@@ -228,7 +235,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         String(msg.data?.message) ||
           "This run has been canceled due to inactivity"
       );
-      cancelRun();
+      cancelRun(502);
       router.push("/"); // Redirect to home page
       return;
     }
@@ -243,7 +250,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
           ? msg.data.trim()
           : msg.data?.message || "An error occurred";
       applyMessage(`Error: ${errorMsg}`);
-      cancelRun(); // Cancel the run
+      cancelRun(503); // Cancel the run
       return;
     }
     if (t === "error") {
@@ -252,7 +259,10 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
           ? msg.data.trim()
           : msg.data?.message || "An error occurred";
       applyMessage(`Error: ${errorMsg}`);
-      cancelRun(); // Cancel the run
+      cancelRun(504); // Cancel the run
+      setRunStatus("Error");
+      setWaitingForInput(true);
+
       return;
     }
   };
@@ -265,30 +275,35 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
       const startRunThenSocket = async () => {
         try {
+          let socketStatus = contextSocketStatus;
+          let responseStatus = null;
           const body = repoUrl ? { github_url: repoUrl } : {};
+          const repoUrlTrimmed = repoUrl?.trim();
+
           let fetch_url = ``;
-          if (repoUrl.toLowerCase().includes("naive-receiver")) {
-            fetch_url = `${API_BASE}/runs/dvd2/${runId}`;
-          } else if (repoUrl.toLowerCase().includes("truster")) {
-            fetch_url = `${API_BASE}/runs/dvd3/${runId}`;
-          } else if (repoUrl.toLowerCase().includes("unstoppable")) {
-            fetch_url = `${API_BASE}/runs/dvd1/${runId}`;
-          } else if (repoUrl.toLowerCase().includes("puppet-deploy")) {
-            fetch_url = `${API_BASE}/runs/dvd8/${runId}`;
-          } else {
-            throw new Error(`Unsupported repoUrl: ${repoUrl}`);
+          const repoMap = {
+            "https://github.com/dhruvjain2905/naive-receiver": "dvd2",
+            "https://github.com/dhruvjain2905/Truster": "dvd3",
+            "https://github.com/dhruvjain2905/Unstoppable": "dvd1",
+            "https://github.com/tunonraksa/puppet-deploy": "dvd8",
+          };
+
+          if (repoUrlTrimmed && repoMap[repoUrlTrimmed]) {
+            await cancelRun(0); // cancel any existing run with the same runId before starting a new one
+            fetch_url = `${API_BASE}/runs/${repoMap[repoUrlTrimmed]}/${runId}`;
+            const response = await fetch(fetch_url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            responseStatus = response.status;
+
+            const result = await response.json();
+            socketStatus = result.status;
+            console.log(result);
           }
-          const response = await fetch(fetch_url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const result = await response.json();
 
-          console.log(result);
-
-          if (result.status === "started") {
-            // Run started successfully, now create WebSocket
+          if (socketStatus === "started") {
             const socket = getSingletonWS(socketUrl);
             socketRef.current = socket;
 
@@ -329,9 +344,9 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
             socket.addEventListener("error", onError);
             socket.addEventListener("close", onClose);
           } else if (
-            result.status === "at_capacity" ||
-            result.status === "at capacity" ||
-            result.status === "queued"
+            socketStatus === "at_capacity" ||
+            socketStatus === "at capacity" ||
+            socketStatus === "queued"
           ) {
             setRunStatus("At capacity");
 
@@ -343,10 +358,10 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
             router.push("/"); // Redirect to home page
             return;
-          } else if (response.status !== 202) {
+          } else if (responseStatus !== 202) {
             setRunStatus("Error");
 
-            console.log("Unexpected status code:", response.status);
+            console.log("Unexpected status code:", responseStatus);
             const email = prompt(
               "Something went wrong! Enter your email to be notified when we've got a fix:"
             );
@@ -405,7 +420,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
         setInput("");
         applyMessage("Session has ended successfully.");
-        cancelRun();
+        cancelRun(505);
         setWaitingForInput(false);
         return;
       }

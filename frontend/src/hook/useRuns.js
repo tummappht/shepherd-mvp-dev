@@ -1,6 +1,9 @@
+import { useSocketStatus } from "@/context/SocketStatusContext";
 import { useEffect, useMemo, useRef } from "react";
 
 export const useRuns = () => {
+  const { setSocketStatus, socketStatus } = useSocketStatus();
+
   const API_BASE = useMemo(() => {
     return (
       process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -15,19 +18,19 @@ export const useRuns = () => {
           .toString(36)
           .slice(2, 10)}`;
 
-  // Only run once: get from localStorage or generate and save
+  // Only run once: get from sessionStorage or generate and save
   const getOrCreateRunId = () => {
     if (typeof window === "undefined") {
       return makeRunId();
     }
 
-    const stored = localStorage.getItem("masRunId");
+    const stored = sessionStorage.getItem("masRunId");
     if (stored) {
       return stored;
     }
 
     const newId = makeRunId();
-    localStorage.setItem("masRunId", newId);
+    sessionStorage.setItem("masRunId", newId);
     return newId;
   };
 
@@ -93,5 +96,7 @@ export const useRuns = () => {
     getSingletonWS,
     handleStartRun,
     socketUrl,
+    setSocketStatus,
+    socketStatus,
   };
 };
