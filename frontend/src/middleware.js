@@ -1,4 +1,4 @@
-// import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
 import NextAuth from "next-auth";
 
@@ -11,22 +11,23 @@ const publicPaths = ["/login"];
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  const sessionAuth = await auth();
-  const session = req.auth;
-  console.log("🚀 ~ middleware ~ req:", req);
-  console.log("🚀 ~ middleware ~ sessionAuth:", sessionAuth);
-  console.log("🚀 ~ middleware ~ session:", session);
-  console.log("🚀 ~ middleware ~ pathname:", pathname);
-  // if (!session) {
-  //   const isPublic = publicPaths.some((path) => path === pathname);
-  //   console.log("🚀 ~ middleware ~ isPublic:", isPublic);
-  //   if (!isPublic) {
-  //     return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
-  //   }
-  // }
-  // if (session && pathname === "/login") {
-  //   return NextResponse.redirect(new URL("/", req.nextUrl.origin));
-  // }
+  const session = await auth();
+  const baseUrl = req.url;
+  // const baseUrl = req.nextUrl.origin;
+  // const session = req.auth;
+  // console.log("🚀 ~ middleware ~ req:", req);
+  // console.log("🚀 ~ middleware ~ sessionAuth:", sessionAuth);
+  // console.log("🚀 ~ middleware ~ session:", session);
+  // console.log("🚀 ~ middleware ~ pathname:", pathname);
+  if (!session) {
+    const isPublic = publicPaths.some((path) => path === pathname);
+    if (!isPublic) {
+      return NextResponse.redirect(new URL("/login", baseUrl));
+    }
+  }
+  if (session && pathname === "/login") {
+    return NextResponse.redirect(new URL("/", baseUrl));
+  }
 });
 
 // CRITICAL: The matcher must exclude all paths handled by the Auth.js API.
