@@ -12,9 +12,9 @@ export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
 
   // Check if it's a static file
-  const isStaticFile = pathname.match(
-    /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf)$/
-  );
+  const staticFileRegex =
+    /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf)$/;
+  const isStaticFile = staticFileRegex.exec(pathname);
 
   console.log("🚀 ~ middleware hit:", pathname);
   console.log("🚀 ~ is static file:", !!isStaticFile);
@@ -47,8 +47,6 @@ export const config = {
     //  - _next/static (static files)
     //  - _next/image (image optimization files)
     //  - favicon.ico (favicon file)
-    //  - files with static extensions (png, jpg, etc.)
-
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf|map)).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
