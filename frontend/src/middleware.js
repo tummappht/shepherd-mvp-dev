@@ -29,10 +29,7 @@ export default auth(async function middleware(req) {
 // Note: This pattern assumes your API handler is in /api/auth/[...nextauth]
 export const config = {
   matcher: [
-    // Match all paths EXCEPT those starting with:
-    // 1. /api/auth (the Auth.js API route)
-    // 2. _next/ (Next.js internals)
-    // 3. static files or favicon
-    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
+    //Match all paths except for the ones starting with /api/auth, /_next/static, /_next/image, favicon.ico, and any common static file extensions
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(png|jpg|jpeg|svg|webp|ico|css|js|woff|woff2|ttf|map)).*)",
   ],
 };
