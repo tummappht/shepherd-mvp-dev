@@ -14,8 +14,6 @@ const apiAuthConfig = {
   adapter: FirestoreAdapter({ credential: cert(serviceAccount) }),
   session: { strategy: "jwt" },
   pages: {
-    // Auth.js will redirect to /login?error=OAuthAccountNotLinked
-    // when the error occurs.
     signIn: "/login",
   },
 };

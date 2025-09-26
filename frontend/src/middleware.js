@@ -4,10 +4,6 @@ import NextAuth from "next-auth";
 
 // Initialize Auth.js middleware using the edge-safe configuration
 const { auth } = NextAuth(authConfig);
-// const { auth } = NextAuth({
-//   ...authConfig,
-//   session: { strategy: "jwt" }, // JWT only for middleware!
-// });
 
 // Define paths that are accessible without authentication
 const publicPaths = ["/login"];
@@ -15,7 +11,6 @@ const publicPaths = ["/login"];
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
   const session = await auth();
-  console.log("🚀 ~ middleware ~ session:", session);
 
   if (!session) {
     const isPublic = publicPaths.some((path) => path === pathname);
