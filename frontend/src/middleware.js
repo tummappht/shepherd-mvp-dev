@@ -11,32 +11,23 @@ const publicPaths = ["/login"];
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
   const session = req.auth;
-  // Debug headers
-  console.log("🚀 ~ middleware ~ host:", req.headers.get("host"));
-  console.log(
-    "🚀 ~ middleware ~ x-forwarded-host:",
-    req.headers.get("x-forwarded-host")
-  );
-  console.log(
-    "🚀 ~ middleware ~ x-forwarded-proto:",
-    req.headers.get("x-forwarded-proto")
-  );
-  console.log("🚀 ~ middleware ~ req.url:", req.url);
+
+  console.log("🚀 ~ middleware ~ session:", session);
+  console.log("🚀 ~ middleware ~ req.nextUrl.origin:", req.nextUrl.origin);
+  console.log("🚀 ~ middleware ~ pathname:", pathname);
 
   if (!session) {
     const isPublic = publicPaths.some((path) => path === pathname);
     console.log("🚀 ~ middleware ~ isPublic:", isPublic);
 
     if (!isPublic) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
     }
   }
 
   if (session && pathname === "/login") {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/", req.nextUrl.origin));
   }
-
-  // Returning nothing (undefined) means continue to the next middleware/route
 });
 
 // CRITICAL: The matcher must exclude all paths handled by the Auth.js API.
