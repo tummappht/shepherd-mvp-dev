@@ -16,7 +16,9 @@ export default function RootLayout({ children }) {
           <div className="flex flex-col h-full">
             <Header />
             <SocketStatusProvider>
-              <main className="flex-1 relative bg-black">{children}</main>
+              <main className="flex flex-col flex-1 relative bg-black">
+                {children}
+              </main>
             </SocketStatusProvider>
             <Footer />
           </div>
