@@ -4,7 +4,7 @@ import Link from "next/link";
 import LogoutButton from "./LogoutButton";
 import { useSession } from "next-auth/react";
 
-export default async function Header() {
+export default function Header() {
   const { data: session } = useSession();
 
   const name = session?.user?.name || "Guest";
