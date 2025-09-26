@@ -11,28 +11,17 @@ const publicPaths = ["/login"];
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
   const session = await auth();
-  const vercelUrl = process.env.NEXTAUTH_URL;
 
   if (!session) {
     const isPublic = publicPaths.some((path) => path === pathname);
 
     if (!isPublic) {
-      let redirectUrl = new URL("/login", req.url);
-
-      if (vercelUrl && req.url.includes("localhost") === false) {
-        redirectUrl = new URL("/login", vercelUrl);
-      }
-      return NextResponse.redirect(redirectUrl);
+      return NextResponse.redirect(new URL("/login", req.url));
     }
   }
 
   if (session && pathname === "/login") {
-    let redirectUrl = new URL("/", req.url);
-
-    if (vercelUrl && req.url.includes("localhost") === false) {
-      redirectUrl = new URL("/", vercelUrl);
-    }
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   // Returning nothing (undefined) means continue to the next middleware/route
