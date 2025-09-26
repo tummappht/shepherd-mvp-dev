@@ -9,11 +9,14 @@ const { auth } = NextAuth(authConfig);
 const publicPaths = ["/login"];
 
 export default auth(async function middleware(req) {
-  // const { pathname } = req.nextUrl;
-  // const session = req.auth;
-  // console.log("🚀 ~ middleware ~ session:", session);
-  // console.log("🚀 ~ middleware ~ req.nextUrl.origin:", req.nextUrl.origin);
-  // console.log("🚀 ~ middleware ~ pathname:", pathname);
+  const { pathname } = req.nextUrl;
+
+  const sessionAuth = await auth();
+  const session = req.auth;
+  console.log("🚀 ~ middleware ~ req:", req);
+  console.log("🚀 ~ middleware ~ sessionAuth:", sessionAuth);
+  console.log("🚀 ~ middleware ~ session:", session);
+  console.log("🚀 ~ middleware ~ pathname:", pathname);
   // if (!session) {
   //   const isPublic = publicPaths.some((path) => path === pathname);
   //   console.log("🚀 ~ middleware ~ isPublic:", isPublic);
