@@ -11,6 +11,8 @@ const publicPaths = ["/login"];
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
 
+  console.log("🚀 ~ middleware hit:", pathname);
+  console.log("🚀 ~ is image request:", pathname.includes("_next/image"));
   const session = await auth();
   const baseUrl = req.url;
 
@@ -34,7 +36,6 @@ export const config = {
     //  - _next/static (static files)
     //  - _next/image (image optimization files)
     //  - favicon.ico (favicon file)
-    //  - public folder files (public/*)
-    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
