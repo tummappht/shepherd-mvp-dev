@@ -11,8 +11,19 @@ const publicPaths = ["/login"];
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
 
+  // Check if it's a static file
+  const isStaticFile = pathname.match(
+    /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf)$/
+  );
+
   console.log("🚀 ~ middleware hit:", pathname);
-  console.log("🚀 ~ is image request:", pathname.includes("_next/image"));
+  console.log("🚀 ~ is static file:", !!isStaticFile);
+
+  // Skip middleware for static files
+  if (isStaticFile) {
+    return;
+  }
+
   const session = await auth();
   const baseUrl = req.url;
 
@@ -31,11 +42,14 @@ export default auth(async function middleware(req) {
 // Note: This pattern assumes your API handler is in /api/auth/[...nextauth]
 export const config = {
   matcher: [
-    //  Match all request paths except for the ones starting with:
-    //  - api (API routes)
-    //  - _next/static (static files)
-    //  - _next/image (image optimization files)
-    //  - favicon.ico (favicon file)
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - files with static extensions (png, jpg, etc.)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf|map)).*)",
   ],
 };
