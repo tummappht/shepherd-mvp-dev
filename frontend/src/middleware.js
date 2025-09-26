@@ -11,9 +11,12 @@ const publicPaths = ["/login"];
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
   const session = await auth();
+  console.log("🚀 ~ middleware ~ session:", session);
+  console.log("🚀 ~ middleware ~ req.url:", req.url);
 
   if (!session) {
     const isPublic = publicPaths.some((path) => path === pathname);
+    console.log("🚀 ~ middleware ~ isPublic:", isPublic);
 
     if (!isPublic) {
       return NextResponse.redirect(new URL("/login", req.url));
