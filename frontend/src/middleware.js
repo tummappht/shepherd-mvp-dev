@@ -10,8 +10,17 @@ const publicPaths = ["/login"];
 
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
-  const session = await auth();
-  console.log("🚀 ~ middleware ~ session:", session);
+  const session = req.auth;
+  // Debug headers
+  console.log("🚀 ~ middleware ~ host:", req.headers.get("host"));
+  console.log(
+    "🚀 ~ middleware ~ x-forwarded-host:",
+    req.headers.get("x-forwarded-host")
+  );
+  console.log(
+    "🚀 ~ middleware ~ x-forwarded-proto:",
+    req.headers.get("x-forwarded-proto")
+  );
   console.log("🚀 ~ middleware ~ req.url:", req.url);
 
   if (!session) {
