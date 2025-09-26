@@ -13,12 +13,7 @@ export default auth(async function middleware(req) {
 
   const session = await auth();
   const baseUrl = req.url;
-  // const baseUrl = req.nextUrl.origin;
-  // const session = req.auth;
-  // console.log("🚀 ~ middleware ~ req:", req);
-  // console.log("🚀 ~ middleware ~ sessionAuth:", sessionAuth);
-  // console.log("🚀 ~ middleware ~ session:", session);
-  // console.log("🚀 ~ middleware ~ pathname:", pathname);
+
   if (!session) {
     const isPublic = publicPaths.some((path) => path === pathname);
     if (!isPublic) {

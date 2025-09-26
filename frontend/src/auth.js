@@ -13,9 +13,6 @@ const apiAuthConfig = {
   ...authConfig,
   adapter: FirestoreAdapter({ credential: cert(serviceAccount) }),
   session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(apiAuthConfig);

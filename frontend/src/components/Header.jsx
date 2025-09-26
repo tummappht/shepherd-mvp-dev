@@ -1,10 +1,11 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
-import { auth } from "@/auth";
 import LogoutButton from "./LogoutButton";
+import { useSession } from "next-auth/react";
 
 export default async function Header() {
-  const session = await auth();
+  const { data: session } = useSession();
 
   const name = session?.user?.name || "Guest";
   const image = session?.user?.image || "/images/pfp.png";
