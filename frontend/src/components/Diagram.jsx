@@ -66,7 +66,7 @@ function agentLabelFromData(data) {
 
 /* ---------------- component ---------------- */
 export default function Diagram({ runId: runIdProp }) {
-  const { socketUrl } = useRuns();
+  const { API_BASE, runId, socketUrl } = useRuns();
   const containerRef = useRef(null);
   const cyRef = useRef(null);
   const centerRef = useRef({ x: 300, y: 200 }); // fallback center

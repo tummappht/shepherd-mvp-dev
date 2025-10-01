@@ -17,8 +17,6 @@ module.exports = {
         surface: "#0C0C0C",
         "surface-hover": "#1A1A1A",
         helper: "#595959",
-        background: "#070707",
-        stroke: "#232323",
       },
     },
   },
