@@ -90,6 +90,10 @@ export const useRuns = () => {
     }
   };
 
+  const isRenderAsMarkdown = (text) => {
+  return text?.includes("|");
+};
+
   return {
     API_BASE,
     runId,
@@ -98,5 +102,6 @@ export const useRuns = () => {
     socketUrl,
     setSocketStatus,
     socketStatus,
+    isRenderAsMarkdown,
   };
 };

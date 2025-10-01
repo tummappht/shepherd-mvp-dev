@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { FaEdit, FaSyncAlt, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useRuns } from "@/hook/useRuns";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Hypothesis({ id, title, onMinimize, minimized }) {
   const {
@@ -12,6 +14,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     getSingletonWS,
     socketUrl,
     socketStatus: contextSocketStatus,
+    isRenderAsMarkdown,
   } = useRuns();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -439,6 +442,9 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         minimized ? "h-auto" : "flex flex-col flex-1 min-h-0"
       }`}
     >
+      <button type="button" onClick={triggerMockMarkdown}>
+        trigger Mock
+      </button>
       <div className="flex justify-between items-center px-4 py-2 bg-[#141414] rounded-t-lg">
         <div className="flex items-center gap-2">
           <p className="font-semibold">{title}</p>
@@ -452,22 +458,30 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
       {!minimized && (
         <div className="flex flex-col flex-1 px-4 py-4 min-h-0">
-          <div className="flex-1 overflow-y-auto gap-2 pr-2">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`flex ${
+                className={`flex mb-2 ${
                   msg.from === "user" ? "justify-end" : "justify-start"
-                }`}
+                } ${isRenderAsMarkdown(msg.text) ? "w-full" : ""}`}
               >
                 <div
-                  className={`px-4 py-2 rounded-lg text-sm max-w-xs break-words ${
+                  className={`px-4 py-2 rounded-lg text-sm break-words markdown-content ${
                     msg.from === "user"
-                      ? "bg-[#df153e] text-white"
-                      : "bg-[#141414] text-gray-300"
+                      ? "bg-primary text-white max-w-xs"
+                      : isRenderAsMarkdown(msg.text)
+                      ? "bg-[#141414] text-gray-300 max-w-4xl w-full"
+                      : "bg-[#141414] text-gray-300 max-w-xs"
                   }`}
                 >
-                  {msg.text}
+                  {isRenderAsMarkdown(msg.text) ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text}
+                    </ReactMarkdown>
+                  ) : (
+                    <span className="whitespace-pre-wrap">{msg.text}</span>
+                  )}
                 </div>
               </div>
             ))}

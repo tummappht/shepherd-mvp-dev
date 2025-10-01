@@ -16,9 +16,6 @@ export default auth(async function middleware(req) {
     /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf)$/;
   const isStaticFile = staticFileRegex.exec(pathname);
 
-  console.log("🚀 ~ middleware hit:", pathname);
-  console.log("🚀 ~ is static file:", !!isStaticFile);
-
   // Skip middleware for static files
   if (isStaticFile) {
     return;

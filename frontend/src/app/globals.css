@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import '../styles/markdown.css';
+
 @font-face {
   font-family: 'ABCWhyte';
   src: url('/fonts/ABCWhyte-Medium-Trial.woff2') format('woff2'),
@@ -21,12 +23,10 @@
 }
 
 :root {
-  --background: #ffffff;
   --foreground: #000000;
 }
 
 @theme inline {
-  --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -34,13 +34,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
     --foreground: #ededed;
   }
 }
 
+html, body, #__next {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  background: var(--background);
   color: var(--foreground);
   font-family: 'ABCWhyte', sans-serif;
 }

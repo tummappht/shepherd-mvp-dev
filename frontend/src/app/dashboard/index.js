@@ -27,7 +27,7 @@ export default function Home() {
           <References />
         </CollectionPanel>
       </div>
-      {/* <WelcomeModal /> */}
+      <WelcomeModal />
     </>
   );
 }
