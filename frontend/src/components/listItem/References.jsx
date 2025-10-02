@@ -2,7 +2,7 @@
 import Image from "next/image";
 import ListItem from "./ListItem";
 
-export default function References({ clicked, setClicked }) {
+export default function References() {
   const references = [
     { name: "Hash-collisions.sol" },
     { name: "Invariant.sol" },
@@ -16,16 +16,7 @@ export default function References({ clicked, setClicked }) {
     </>
   );
 
-  const handleClick = (itemName) => {
-    setClicked(clicked === itemName ? null : itemName);
-  };
-
   return (
-    <ListItem
-      items={references}
-      renderIcon={renderIcon}
-      clickedItem={clicked}
-      onItemClick={handleClick}
-    />
+    <ListItem items={references} renderIcon={renderIcon} onItemClick={null} />
   );
 }

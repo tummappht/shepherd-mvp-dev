@@ -14,7 +14,7 @@ export default function CollectionPanel({
         <div>
           <div className="flex items-center gap-2">
             {prefixIcon}
-            <p className="text-md font-semibold">{title}</p>
+            <p className="text-xl font-semibold">{title}</p>
           </div>
           <p className="text-secondary">{description}</p>
         </div>
@@ -31,9 +31,7 @@ export default function CollectionPanel({
           <></>
         )}
       </div>
-      <div className="bg-surface p-6 border border-gray-border rounded-lg">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }

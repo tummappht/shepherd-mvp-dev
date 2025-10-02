@@ -1,31 +1,33 @@
 "use client";
-import Repositories from "@/components/Repositories";
-import References from "@/components/References";
+import Repositories from "@/components/listItem/Repositories";
+import References from "@/components/listItem/References";
 import CollectionPanel from "@/components/CollectionPanel";
 import WelcomeModal from "@/components/WelcomeModal";
-import { FaFolder, FaLink } from "react-icons/fa";
 
 export default function Home() {
   return (
     <>
-      <div className="container mx-auto gap-8 flex flex-col py-8 px-4">
-        <CollectionPanel
-          title="My Repositories"
-          prefixIcon={<FaFolder className="text-md text-gray-400" />}
-          description="Access all your previous repositories and hypotheses."
-          href="/new-test"
-        >
-          <Repositories />
-        </CollectionPanel>
-
-        <CollectionPanel
-          title="References"
-          prefixIcon={<FaLink className="text-md text-gray-400" />}
-          description="Identify smart contracts with similar vulnerabilities to support your hypothesis."
-          href="#"
-        >
-          <References />
-        </CollectionPanel>
+      <div className="container h-full mx-auto max-h-screen">
+        <div className="grid grid-rows-[70%_1fr] gap-4 h-full">
+          <div className="py-6 px-8 bg-background border border-stroke rounded-lg overflow-auto">
+            <CollectionPanel
+              title="Session"
+              description="Access all your previous runs."
+              href="/new-test"
+            >
+              <Repositories />
+            </CollectionPanel>
+          </div>
+          <div className="py-8 px-8 bg-background border border-stroke rounded-lg overflow-auto">
+            <CollectionPanel
+              title="Ground Truths"
+              description="Identify smart contracts and reports with similar vulnerabilities to support your hypothesis."
+              href="#"
+            >
+              <References />
+            </CollectionPanel>
+          </div>
+        </div>
       </div>
       {/* <WelcomeModal /> */}
     </>

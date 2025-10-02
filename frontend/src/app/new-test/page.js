@@ -79,7 +79,7 @@ export default function NewTest() {
     <>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="container mx-auto flex flex-col gap-8 py-8 px-4"
+        className="container mx-auto flex flex-col gap-8 py-8 px-4 border border-stroke rounded-lg"
       >
         <Card
           title="Upload Repository"

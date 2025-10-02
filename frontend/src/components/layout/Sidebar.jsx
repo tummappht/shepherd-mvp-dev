@@ -50,11 +50,11 @@ export default function Sidebar() {
       }`}
       aria-label="Main navigation sidebar"
     >
-      <div className="pt-8 px-4 space-y-10 flex-1">
+      <div className="pt-6 px-4 space-y-10 flex-1">
         {/* Logo */}
         <Link
           href="/"
-          className="block px-4 relative h-10 overflow-hidden"
+          className="block px-4 relative h-6 overflow-hidden"
           aria-label="Go to homepage"
         >
           {/* Collapsed Logo */}
@@ -66,15 +66,15 @@ export default function Sidebar() {
             <Image
               src="/shepherd-logo.png"
               alt="Shepherd"
-              width={32}
-              height={32}
+              width={24}
+              height={24}
               priority
             />
           </div>
 
           {/* Expanded Logo */}
           <div
-            className={`absolute left-1/2 -translate-x-1/2 flex items-center transition-all duration-300 ${
+            className={`absolute flex items-center transition-all duration-300 ${
               isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100"
             }`}
           >
@@ -142,7 +142,11 @@ export default function Sidebar() {
       </div>
 
       {/* User Info Section */}
-      <div className="w-full px-4 py-6 mt-auto border-t border-stroke">
+      <div
+        className={`w-full  py-6 mt-auto border-t border-stroke ${
+          isCollapsed ? "px-4" : "px-6"
+        }`}
+      >
         <div
           className={`flex items-center ${
             isCollapsed ? "flex-col gap-2" : "gap-3"
@@ -174,19 +178,19 @@ export default function Sidebar() {
           <button
             onClick={toggleSidebar}
             className={`text-foreground hover:bg-surface-hover transition-all duration-200 focus:outline-none rounded p-1.5 ${
-              isCollapsed ? "mt-0" : "ml-auto"
+              isCollapsed ? "mt-0 flex justify-center w-10" : "ml-auto"
             }`}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-expanded={!isCollapsed}
           >
             {isCollapsed ? (
               <TbLayoutSidebarLeftExpand
-                className="text-xl"
+                className="text-2xl"
                 aria-hidden="true"
               />
             ) : (
               <TbLayoutSidebarLeftCollapse
-                className="text-xl"
+                className="text-2xl"
                 aria-hidden="true"
               />
             )}
