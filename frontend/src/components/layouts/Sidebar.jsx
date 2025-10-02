@@ -33,7 +33,7 @@ const MENU_ITEMS = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isStaticLayout }) {
   const { data: session } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -48,8 +48,8 @@ export default function Sidebar() {
   return (
     <aside
       className={`bg-background border border-stroke flex flex-col rounded-lg transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-20" : "w-72"
-      }`}
+        isStaticLayout ? "" : "mb-[52px]"
+      } ${isCollapsed ? "w-20" : "w-72"}`}
       aria-label="Main navigation sidebar"
     >
       <div className="pt-6 px-4 space-y-10 flex-1">
@@ -179,7 +179,7 @@ export default function Sidebar() {
 
           <button
             onClick={toggleSidebar}
-            className={`text-foreground hover:bg-surface-hover transition-all duration-200 focus:outline-none rounded p-1.5 ${
+            className={`text-secondary hover:bg-surface-hover transition-all duration-200 focus:outline-none rounded p-1.5 ${
               isCollapsed ? "mt-0 flex justify-center w-10" : "ml-auto"
             }`}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}

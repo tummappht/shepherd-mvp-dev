@@ -1,7 +1,7 @@
-export default function Footer() {
+export default function Footer({ isStaticLayout }) {
   return (
     <footer className="text-white bg-black">
-      <div className="container ml-auto text-center py-4 px-6">
+      <div className={`py-4 ${isStaticLayout ? "px-6" : ""}`}>
         <p className="text-sm text-gray-400 text-right">
           © 2025 Shepherd Security Inc, All Rights Reserved.
         </p>

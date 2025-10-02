@@ -1,7 +1,6 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import References from "@/components/References";
 import ModalWrapper from "@/components/ModalWrapper";
 import { useState } from "react";
 import FileDropZone from "@/components/FileDropZone";
@@ -19,6 +18,7 @@ import {
 } from "react-icons/fa";
 import { useRuns } from "@/hook/useRuns";
 import { useForm, Controller } from "react-hook-form";
+import References from "@/components/listItem/References";
 
 export default function NewTest() {
   const [showRef, setShowRef] = useState(false);
@@ -79,16 +79,13 @@ export default function NewTest() {
     <>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="container mx-auto flex flex-col gap-8 py-8 px-4 border border-stroke rounded-lg"
+        className="container mx-auto flex flex-col gap-4"
       >
         <Card
           title="Upload Repository"
           description="Please upload your repository as a .zip file for analysis."
         >
-          <div className="flex items-center gap-2">
-            <FaUpload />
-            <CardTitle className="mb-0">Upload Repository</CardTitle>
-          </div>
+          <CardTitle className="mb-0">Upload Repository</CardTitle>
           <CardDescription>
             Please upload your repository as a .zip file for analysis.
           </CardDescription>
@@ -147,10 +144,7 @@ export default function NewTest() {
           </CardContent>
         </Card>
         <Card>
-          <div className="flex items-center gap-2">
-            <FaRegFileAlt />
-            <CardTitle className="mb-0">Project description</CardTitle>
-          </div>
+          <CardTitle className="mb-0">Project description</CardTitle>
           <CardDescription>
             Please provide the protocol documentation to help better inform the
             repository.
@@ -189,10 +183,7 @@ export default function NewTest() {
           </CardContent>
         </Card>
         <Card>
-          <div className="flex items-center gap-2">
-            <FaRegBookmark />
-            <CardTitle className="mb-0">Attach Reference</CardTitle>
-          </div>
+          <CardTitle className="mb-0">Attach Reference</CardTitle>
           <CardDescription>
             Attach related contracts you&apos;ve ref to inform vulnerability
             exploration.
@@ -242,10 +233,7 @@ export default function NewTest() {
           </CardContent>
         </Card>
         <Card>
-          <div className="flex items-center gap-2">
-            <FaRegFileAlt />
-            <CardTitle className="mb-0">Select an Environment</CardTitle>
-          </div>
+          <CardTitle className="mb-0">Select an Environment</CardTitle>
           <CardDescription>
             Please select the environment where you&apos;d like to deploy the
             smart contracts from the repository indicated.

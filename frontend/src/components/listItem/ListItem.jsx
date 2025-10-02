@@ -9,9 +9,9 @@ export default function ListItem({
 }) {
   const getColumnClass = () => {
     if (columns === 2) {
-      return "grid grid-cols-2 gap-x-3";
+      return "grid grid-cols-2 gap-x-3 gap-y-3";
     }
-    return "flex flex-col gap-3";
+    return "grid grid-cols-1 gap-y-3";
   };
 
   return (
@@ -20,7 +20,7 @@ export default function ListItem({
         <button
           type="button"
           key={item.name}
-          className={`flex items-center justify-between border border-gray-border rounded-lg px-6 cursor-pointer transition-all h-14`}
+          className={`flex flex-1 items-center justify-between border border-gray-border rounded-lg px-6 cursor-pointer transition-all h-14`}
           onClick={() => onItemClick?.(item.name)}
         >
           <div className="flex flex-row gap-2 items-center">

@@ -39,7 +39,7 @@ CardContent.propTypes = {
 export default function Card({ children, className = "" }) {
   return (
     <div
-      className={`bg-surface border border-gray-border rounded-lg shadow-md p-6 ${className}`}
+      className={`bg-background border border-gray-border rounded-lg shadow-md p-6 ${className}`}
     >
       {children}
     </div>
