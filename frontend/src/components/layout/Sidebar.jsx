@@ -2,31 +2,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { FaCog, FaBug, FaTelegramPlane } from "react-icons/fa";
 import {
   TbLayoutSidebarLeftCollapse,
   TbLayoutSidebarLeftExpand,
+  TbBug,
+  TbBrandTelegram,
+  TbMessageChatbot,
 } from "react-icons/tb";
 import { useSession } from "next-auth/react";
 
 const MENU_ITEMS = [
   {
     href: "/support",
-    icon: FaCog,
+    icon: TbMessageChatbot,
     label: "Contact Support",
-    iconColor: "text-foreground",
+    iconColor: "text-secondary",
   },
   {
     href: "/report-bug",
-    icon: FaBug,
+    icon: TbBug,
     label: "Report a Bug",
-    iconColor: "text-foreground",
+    iconColor: "text-secondary",
   },
   {
     href: "https://t.me/your_telegram_group",
-    icon: FaTelegramPlane,
+    icon: TbBrandTelegram,
     label: "Join Telegram",
-    iconColor: "text-foreground",
+    iconColor: "text-secondary",
     external: true,
   },
 ];
@@ -99,11 +101,11 @@ export default function Sidebar() {
               const content = (
                 <>
                   <Icon
-                    className={`text-lg ${iconColor} flex-shrink-0 transition-transform duration-200`}
+                    className={`text-2xl ${iconColor} flex-shrink-0 transition-transform duration-200`}
                     aria-hidden="true"
                   />
                   <span
-                    className={`text-foreground whitespace-nowrap transition-all duration-300 ${
+                    className={`text-secondary whitespace-nowrap transition-all duration-300 ${
                       isCollapsed
                         ? "opacity-0 w-0 overflow-hidden"
                         : "opacity-100 w-auto"

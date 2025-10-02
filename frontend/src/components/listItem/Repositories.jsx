@@ -11,7 +11,7 @@ export default function Repositories() {
     { name: "Monad" },
   ];
 
-  const renderIcon = () => <TbFolderCode className="text-lg text-secondary" />;
+  const renderIcon = () => <TbFolderCode className="text-2xl text-secondary" />;
 
   return (
     <ListItem items={repositories} renderIcon={renderIcon} onItemClick={null} />

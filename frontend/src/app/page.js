@@ -2,7 +2,7 @@
 import Repositories from "@/components/listItem/Repositories";
 import References from "@/components/listItem/References";
 import CollectionPanel from "@/components/CollectionPanel";
-import WelcomeModal from "@/components/WelcomeModal";
+// import WelcomeModal from "@/components/WelcomeModal";
 
 export default function Home() {
   return (
@@ -30,7 +30,7 @@ export default function Home() {
           </CollectionPanel>
         </div>
       </div>
-      <WelcomeModal />
+      {/* <WelcomeModal /> */}
     </>
   );
 }

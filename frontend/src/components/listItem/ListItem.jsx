@@ -1,14 +1,26 @@
 import PropTypes from "prop-types";
 import { TbDots } from "react-icons/tb";
 
-export default function ListItem({ items, renderIcon, onItemClick }) {
+export default function ListItem({
+  items,
+  renderIcon,
+  onItemClick,
+  columns = 1,
+}) {
+  const getColumnClass = () => {
+    if (columns === 2) {
+      return "grid grid-cols-2 gap-x-3 gap-y-3";
+    }
+    return "flex flex-col gap-x-3 gap-y-3";
+  };
+
   return (
-    <div className="flex flex-col gap-2 overflow-y-auto flex-1">
+    <div className={`overflow-y-auto flex-1 ${getColumnClass()}`}>
       {items.map((item) => (
         <button
           type="button"
           key={item.name}
-          className={`flex items-center justify-between border border-gray-border rounded-lg px-6 py-3 cursor-pointer transition-all`}
+          className={`flex items-center justify-between border border-gray-border rounded-lg px-6 cursor-pointer transition-all h-14`}
           onClick={() => onItemClick?.(item.name)}
         >
           <div className="flex flex-row gap-2 items-center">
@@ -26,4 +38,5 @@ ListItem.propTypes = {
   items: PropTypes.array.isRequired,
   renderIcon: PropTypes.func,
   onItemClick: PropTypes.func,
+  columns: PropTypes.oneOf([1, 2]),
 };

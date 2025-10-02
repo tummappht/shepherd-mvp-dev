@@ -1,6 +1,6 @@
 "use client";
-import Image from "next/image";
 import ListItem from "./ListItem";
+import { TbFileText } from "react-icons/tb";
 
 export default function References() {
   const references = [
@@ -9,14 +9,14 @@ export default function References() {
     { name: "ReadOnlyReentrancy.sol" },
   ];
 
-  const renderIcon = () => (
-    <>
-      <Image src="/images/defi.png" width={20} height={20} alt="DeFiHackLabs" />
-      <Image src="/images/file.png" width={20} height={20} alt="File" />
-    </>
-  );
+  const renderIcon = () => <TbFileText className="text-2xl text-secondary" />;
 
   return (
-    <ListItem items={references} renderIcon={renderIcon} onItemClick={null} />
+    <ListItem
+      items={references}
+      renderIcon={renderIcon}
+      onItemClick={null}
+      columns={2}
+    />
   );
 }
