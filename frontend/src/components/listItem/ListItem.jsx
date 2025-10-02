@@ -3,12 +3,12 @@ import { TbDots } from "react-icons/tb";
 
 export default function ListItem({ items, renderIcon, onItemClick }) {
   return (
-    <div className="flex flex-col gap-2 min-h-0 list-item-wrap">
+    <div className="flex flex-col gap-2 overflow-y-auto flex-1">
       {items.map((item) => (
         <button
           type="button"
           key={item.name}
-          className={`flex flex-row border border-gray-border rounded-lg px-6 py-3 items-center justify-between cursor-pointer transition-all`}
+          className={`flex items-center justify-between border border-gray-border rounded-lg px-6 py-3 cursor-pointer transition-all`}
           onClick={() => onItemClick?.(item.name)}
         >
           <div className="flex flex-row gap-2 items-center">

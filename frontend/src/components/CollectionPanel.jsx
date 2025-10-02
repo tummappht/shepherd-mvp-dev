@@ -3,19 +3,15 @@ import PropTypes from "prop-types";
 
 export default function CollectionPanel({
   title,
-  prefixIcon,
   description,
   children,
   href,
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="w-full flex justify-between items-center">
+    <>
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <div className="flex items-center gap-2">
-            {prefixIcon}
-            <p className="text-xl font-semibold">{title}</p>
-          </div>
+          <p className="text-xl font-semibold">{title}</p>
           <p className="text-secondary">{description}</p>
         </div>
         {href ? (
@@ -32,13 +28,12 @@ export default function CollectionPanel({
         )}
       </div>
       {children}
-    </div>
+    </>
   );
 }
 
 CollectionPanel.propTypes = {
   title: PropTypes.string,
-  prefixIcon: PropTypes.node,
   description: PropTypes.string,
   children: PropTypes.node,
   href: PropTypes.string,

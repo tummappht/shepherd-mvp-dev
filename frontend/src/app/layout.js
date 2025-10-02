@@ -13,13 +13,11 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body className="bg-black text-white">
         <SessionProvider>
-          <div className="flex flex-col min-w-full min-h-0 max-h-screen bg-black">
-            <div className="flex grow gap-4 p-6 pb-0">
+          <div className="flex flex-col w-screen h-screen bg-black">
+            <div className="flex-1 flex gap-4 p-6 pb-0 overflow-hidden">
               <Sidebar />
               <SocketStatusProvider>
-                <main className="flex flex-col flex-1 relative">
-                  {children}
-                </main>
+                <main className="flex-1 flex flex-col min-w-0">{children}</main>
               </SocketStatusProvider>
             </div>
             <Footer />
