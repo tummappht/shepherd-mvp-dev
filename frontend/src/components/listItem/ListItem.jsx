@@ -9,9 +9,9 @@ export default function ListItem({
 }) {
   const getColumnClass = () => {
     if (columns === 2) {
-      return "grid grid-cols-2 gap-x-3 gap-y-3";
+      return "grid grid-cols-2 gap-x-3";
     }
-    return "flex flex-col gap-x-3 gap-y-3";
+    return "flex flex-col gap-3";
   };
 
   return (
