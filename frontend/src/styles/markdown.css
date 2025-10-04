@@ -1,0 +1,54 @@
+/* Custom styles for markdown tables */
+.markdown-content {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.markdown-content th {
+  background-color: #374151;
+  color: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid #4b5563;
+}
+
+.markdown-content td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #374151;
+  color: #d1d5db;
+  vertical-align: top;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 300px;
+}
+
+.markdown-content tbody tr:hover {
+  background-color: #1f2937;
+}
+
+.markdown-content tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-content .table-container {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.markdown-content p {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}

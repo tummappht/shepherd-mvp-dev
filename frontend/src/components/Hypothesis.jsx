@@ -3,7 +3,37 @@
 import { useState, useEffect, useRef } from "react";
 import { FaEdit, FaSyncAlt, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useRuns } from "@/hook/useRuns";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+/* ---------- helpers ---------- */
+
+const makeRunId = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `run-${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .slice(2, 10)}`;
+
+function getSingletonWS(url) {
+  if (typeof window === "undefined") return new WebSocket(url);
+  const pool = (window.__masWsPool ||= new Map());
+  const existing = pool.get(url);
+  if (existing && existing.readyState < 2) return existing; // 0 CONNECTING, 1 OPEN
+  const ws = new WebSocket(url);
+  pool.set(url, ws);
+  ws.addEventListener("close", () => {
+    if (pool.get(url) === ws) pool.delete(url);
+  });
+  return ws;
+}
+
+// Helper to detect if text contains tables or should be rendered as markdown
+const shouldRenderAsMarkdown = (text) => {
+  return text && text.includes("|");
+};
+
+/* ---------- component ---------- */
 
 export default function Hypothesis({ id, title, onMinimize, minimized }) {
   const {
@@ -36,6 +66,29 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     setIsSystemThinking(false);
     if (text) setMessages((prev) => [...prev, { from: "system", text }]);
     setRunStatus("Started"); // Change from Initializing... status once the first message is sent
+  };
+
+  const triggerMockMarkdown = () => {
+    const mock = {
+      type: "agent",
+      data: {
+        tag_type: "agent",
+        timestamp: "2025-09-21T05:03:23.774794+00:00",
+        agent_type: "reporter",
+        content:
+          "| Problems Found                             | Where Found (Snippet/Line)                                               | Mitigation / Improvements                                    |\n|--------------------------------------------|--------------------------------------------------------------------------|----------------------------------------------------------------|\n| Misappropriation of FlashLoan fees due to repeated calls in a single transaction. | Located in the NaiveReceiverPool.flashLoan function through the multicall and meta-transaction execution route. | The contract should implement checks to limit the number of flashLoan calls that can be triggered in a single transaction. Consider rate limiting or imposing additional checks on the transaction initiator. |\n| Fixed fee logic is susceptible to zero-amount exploits. | Exploit realized by calling flashLoan with amount 0, causing fees to transfer without principal. | Adjust fee calculation logic to ensure that fees are proportionate to the loan amount rather than a flat rate, and impose a minimum loan amount for fee applicability. |\n| Multicall allows unforeseen exploitation.   | Exploitation allowed by combining calls within a multicall structure, bypassing individual transaction checks. | Add logic to prevent multicall abuses, such as requiring business-logic checks within loops or combinations triggered by multicalls. |\n\nThis table identifies key vulnerabilities and suggests potential mitigations to enhance the security of the smart contract.",
+        is_markdown_table: true,
+      },
+      tag_type: "AGENT",
+      stream_id: "stream_2",
+      stream_complete: true,
+    };
+    applyMessage(
+      `${mock.data?.agent_type || "Unknown"} agent:\n${
+        mock.data?.content || mock.data || ""
+      }`
+    );
+    console.log("🚀 ~ triggerMockMarkdown ~ mock:", mock);
   };
 
   // Auto-focus input when waiting for user input
@@ -109,7 +162,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
   }, [API_BASE, runId]);
 
   const processRaw = (raw) => {
-    console.log(raw);
+    console.log("🚀 ~ processRaw ~ raw:", raw);
     // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
     if (typeof raw === "string") {
       const m = raw.match(/^<<<([A-Z_]+)>>>([\s\S]*?)<<<END_\1>>>$/);
@@ -439,6 +492,9 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         minimized ? "h-auto" : "flex flex-col flex-1 min-h-0"
       }`}
     >
+      <button type="button" onClick={triggerMockMarkdown}>
+        trigger Mock
+      </button>
       <div className="flex justify-between items-center px-4 py-2 bg-[#141414] rounded-t-lg">
         <div className="flex items-center gap-2">
           <p className="font-semibold">{title}</p>
@@ -452,22 +508,32 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
       {!minimized && (
         <div className="flex flex-col flex-1 px-4 py-4 min-h-0">
-          <div className="flex-1 overflow-y-auto gap-2 pr-2">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`flex ${
+                className={`flex mb-2 ${
                   msg.from === "user" ? "justify-end" : "justify-start"
-                }`}
+                } ${shouldRenderAsMarkdown(msg.text) ? "w-full" : ""}`}
               >
                 <div
-                  className={`px-4 py-2 rounded-lg text-sm max-w-xs break-words ${
+                  className={`px-4 py-2 rounded-lg text-sm break-words markdown-content ${
                     msg.from === "user"
-                      ? "bg-[#df153e] text-white"
-                      : "bg-[#141414] text-gray-300"
+                      ? "bg-primary text-white max-w-xs"
+                      : shouldRenderAsMarkdown(msg.text)
+                      ? "bg-[#141414] text-gray-300 max-w-4xl w-full"
+                      : "bg-[#141414] text-gray-300 max-w-xs"
                   }`}
                 >
-                  {msg.text}
+                  {shouldRenderAsMarkdown(msg.text) ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
+                  ) : (
+                    <span className="whitespace-pre-wrap">{msg.text}</span>
+                  )}
                 </div>
               </div>
             ))}

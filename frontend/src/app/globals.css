@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import '../styles/markdown.css';
+
 @font-face {
   font-family: 'ABCWhyte';
   src: url('/fonts/ABCWhyte-Medium-Trial.woff2') format('woff2'),
