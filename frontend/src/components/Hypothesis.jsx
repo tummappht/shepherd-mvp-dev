@@ -5,30 +5,9 @@ import { FaEdit, FaSyncAlt, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useRuns } from "@/hook/useRuns";
 
 /* ---------- helpers ---------- */
-
-const makeRunId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `run-${Date.now().toString(36)}-${Math.random()
-        .toString(36)
-        .slice(2, 10)}`;
-
-function getSingletonWS(url) {
-  if (typeof window === "undefined") return new WebSocket(url);
-  const pool = (window.__masWsPool ||= new Map());
-  const existing = pool.get(url);
-  if (existing && existing.readyState < 2) return existing; // 0 CONNECTING, 1 OPEN
-  const ws = new WebSocket(url);
-  pool.set(url, ws);
-  ws.addEventListener("close", () => {
-    if (pool.get(url) === ws) pool.delete(url);
-  });
-  return ws;
-}
-
-// Helper to detect if text contains tables or should be rendered as markdown
 const shouldRenderAsMarkdown = (text) => {
   return text && text.includes("|");
 };
@@ -526,9 +505,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
                   }`}
                 >
                   {shouldRenderAsMarkdown(msg.text) ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                    >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {msg.text}
                     </ReactMarkdown>
                   ) : (
