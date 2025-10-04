@@ -268,14 +268,14 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
           "This run has been canceled due to inactivity"
       );
       cancelRun(502);
-      router.push("/"); // Redirect to home page
+      // router.push("/"); // Redirect to home page
       return;
     }
-    // if (t === "complete") {
-    // console.log("user entered N");
-    // cancelRun();
-    // return;
-    // }
+    if (t === "complete") {
+      console.log("user entered N");
+      cancelRun();
+      return;
+    }
     if (t === "stderr") {
       const errorMsg =
         typeof msg.data === "string"
@@ -358,7 +358,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
                 "Connection failed! Something went wrong on our end. Enter your email to be notified when we've got a fix:"
               );
               await saveWaitlistEmail(email);
-              router.push("/new-test");
+              // router.push("/new-test");
             };
 
             const onClose = async (e) => {
@@ -368,7 +368,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
                   "Connection lost unexpectedly! Enter your email to be notified when we've resolved the issue:"
                 );
                 await saveWaitlistEmail(email);
-                router.push("/new-test");
+                // router.push("/new-test");
               }
             };
 
@@ -388,7 +388,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
             await saveWaitlistEmail(email);
 
-            router.push("/"); // Redirect to home page
+            // router.push("/"); // Redirect to home page
             return;
           } else if (responseStatus !== 202) {
             setRunStatus("Error");
@@ -471,9 +471,6 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         minimized ? "h-auto" : "flex flex-col flex-1 min-h-0"
       }`}
     >
-      <button type="button" onClick={triggerMockMarkdown}>
-        trigger Mock
-      </button>
       <div className="flex justify-between items-center px-4 py-2 bg-[#141414] rounded-t-lg">
         <div className="flex items-center gap-2">
           <p className="font-semibold">{title}</p>
