@@ -539,7 +539,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="w-full bg-background border border-stroke rounded-md py-4 py-2 text-md text-white placeholder:text-secondary"
+          className="w-full bg-background border border-stroke rounded-md py-4 pl-6 pr-14 text-md text-white placeholder:text-secondary placeholder:italic"
           disabled={!waitingForInput}
         />
         <button
