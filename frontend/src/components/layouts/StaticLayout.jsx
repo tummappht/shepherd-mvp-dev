@@ -12,9 +12,7 @@ export default function StaticLayout({ children }) {
     <div className="flex flex-col w-screen h-screen bg-black">
       <div className="flex-1 flex gap-4 p-6 pb-0 overflow-hidden">
         <Sidebar isStaticLayout />
-        <SocketStatusProvider>
-          <main className="flex-1 flex flex-col min-w-0">{children}</main>
-        </SocketStatusProvider>
+        <main className="flex-1 flex flex-col min-w-0">{children}</main>
       </div>
       <Footer isStaticLayout />
     </div>

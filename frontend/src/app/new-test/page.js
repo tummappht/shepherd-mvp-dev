@@ -9,13 +9,7 @@ import Card, {
   CardDescription,
   CardTitle,
 } from "@/components/Card";
-import {
-  FaRegBookmark,
-  FaRegFileAlt,
-  FaSyncAlt,
-  FaTimes,
-  FaUpload,
-} from "react-icons/fa";
+import { FaSyncAlt, FaTimes } from "react-icons/fa";
 import { useRuns } from "@/hook/useRuns";
 import { useForm, Controller } from "react-hook-form";
 import References from "@/components/listItem/References";
@@ -33,7 +27,14 @@ export default function NewTest() {
     handleSubmit,
     register,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      contactAsset: null,
+      tunnelUrl: "https://colony-poultry-rare-journalism.trycloudflare.com",
+      githubUrl: "https://github.com/alchemix-finance/alchemix-v2-dao",
+      projectDescription: "https://github.com/alchemix-finance/alchemix-v2-dao",
+    },
+  });
 
   const handleAttach = () => {
     if (selectedReference) {

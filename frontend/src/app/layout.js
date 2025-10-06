@@ -1,3 +1,4 @@
+import { SocketStatusProvider } from "@/context/SocketStatusContext";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
@@ -12,7 +13,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="bg-black text-white">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <SocketStatusProvider>{children}</SocketStatusProvider>
+        </SessionProvider>
       </body>
     </html>
   );

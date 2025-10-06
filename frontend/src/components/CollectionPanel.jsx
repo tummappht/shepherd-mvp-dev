@@ -9,7 +9,7 @@ export default function CollectionPanel({
 }) {
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 gap-4">
         <div>
           <p className="text-xl font-semibold">{title}</p>
           <p className="text-secondary">{description}</p>

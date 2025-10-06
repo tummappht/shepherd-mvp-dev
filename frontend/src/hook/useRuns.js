@@ -68,6 +68,7 @@ export const useRuns = () => {
     return ws;
   };
 
+  //TODO: Refactor to use services and move websocket thing to useWebSocket
   const handleStartRun = async (formData) => {
     try {
       const response = await fetch(`${API_BASE}/runs/${runId}`, {
@@ -90,6 +91,10 @@ export const useRuns = () => {
     }
   };
 
+  const isRenderAsMarkdown = (text) => {
+    return text?.includes("|");
+  };
+
   return {
     API_BASE,
     runId,
@@ -98,5 +103,6 @@ export const useRuns = () => {
     socketUrl,
     setSocketStatus,
     socketStatus,
+    isRenderAsMarkdown,
   };
 };

@@ -1,18 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { FaEdit, FaSyncAlt, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useRuns } from "@/hook/useRuns";
-
-/* ---------- helpers ---------- */
-const shouldRenderAsMarkdown = (text) => {
-  return text && text.includes("|");
-};
-
-/* ---------- component ---------- */
+import { TbArrowUp, TbCircle, TbEdit, TbRefresh } from "react-icons/tb";
 
 export default function Hypothesis({ id, title, onMinimize, minimized }) {
   const {
@@ -21,11 +15,12 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     getSingletonWS,
     socketUrl,
     socketStatus: contextSocketStatus,
+    isRenderAsMarkdown,
   } = useRuns();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [waitingForInput, setWaitingForInput] = useState(false);
-  const [runStatus, setRunStatus] = useState("Initializing...");
+  const [runStatus, setRunStatus] = useState("Initializing");
   const [isSystemThinking, setIsSystemThinking] = useState(true);
 
   const messagesEndRef = useRef(null);
@@ -465,103 +460,102 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     setIsSystemThinking(true);
   };
 
+  const statusColor = useMemo(() => {
+    switch (runStatus) {
+      case "Started":
+        return "text-text-success border-stroke-success bg-bg-success";
+      case "At capacity":
+      case "Error":
+        return "text-text-error border-stroke-error bg-bg-error";
+      default:
+        return "text-text-pending border-stroke-pending bg-bg-pending";
+    }
+  }, [runStatus]);
+
   return (
-    <div
-      className={`text-white w-full border border-gray-border bg-surface rounded-lg ${
-        minimized ? "h-auto" : "flex flex-col flex-1 min-h-0"
-      }`}
-    >
-      <div className="flex justify-between items-center px-4 py-2 bg-[#141414] rounded-t-lg">
+    <div className="text-white w-full bg-surface flex flex-col flex-1 min-h-0">
+      <div className="flex items-center justify-between px-9 py-6 border-b border-stroke">
         <div className="flex items-center gap-2">
           <p className="font-semibold">{title}</p>
-          <FaEdit className="text-sm text-gray-400" />
-          <span className="text-secondary">{runStatus}</span>
+          <button type="button" onClick={onMinimize}>
+            <TbEdit className="text-md text-secondary" />
+          </button>
         </div>
-        <button type="button" onClick={() => onMinimize?.(id)}>
-          <FaWindowMinimize className="text-gray-400" />
-        </button>
+        <div
+          className={`flex items-center border ${statusColor} rounded-md h-[30px] px-4`}
+        >
+          <span>{runStatus}</span>
+        </div>
       </div>
 
-      {!minimized && (
-        <div className="flex flex-col flex-1 px-4 py-4 min-h-0">
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex mb-2 ${
-                  msg.from === "user" ? "justify-end" : "justify-start"
-                } ${shouldRenderAsMarkdown(msg.text) ? "w-full" : ""}`}
-              >
-                <div
-                  className={`px-4 py-2 rounded-lg text-sm break-words markdown-content ${
-                    msg.from === "user"
-                      ? "bg-primary text-white max-w-xs"
-                      : shouldRenderAsMarkdown(msg.text)
-                      ? "bg-[#141414] text-gray-300 max-w-4xl w-full"
-                      : "bg-[#141414] text-gray-300 max-w-xs"
-                  }`}
-                >
-                  {shouldRenderAsMarkdown(msg.text) ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.text}
-                    </ReactMarkdown>
-                  ) : (
-                    <span className="whitespace-pre-wrap">{msg.text}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-            {isSystemThinking && !waitingForInput && (
-              <div className="flex justify-start">
-                <div className="px-4 py-2 rounded-lg text-sm bg-[#141414] text-gray-300">
-                  <div className="flex space-x-1 items-center">
-                    <div className="flex space-x-1 ml-2">
-                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
+      <div className="flex flex-col flex-1 px-7 py-3 min-h-0">
+        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex gap-3 text-secondary relative pl-7`}
+            >
+              <span className="border border-white w-2 h-2 absolute top-2 left-2 rounded-full" />
+              {index !== messages.length - 1 ? (
+                <span className="border border-secondary border-dashed absolute top-6 left-[11px] h-[calc(100%-1rem)]" />
+              ) : null}
+              {isRenderAsMarkdown(msg.text) ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.text}
+                </ReactMarkdown>
+              ) : (
+                <span className="whitespace-pre-wrap">{msg.text}</span>
+              )}
+            </div>
+          ))}
+          {isSystemThinking && !waitingForInput && (
+            <div className="flex justify-start">
+              <div className="px-4 py-2 rounded-lg text-sm bg-[#141414] text-gray-300">
+                <div className="flex space-x-1 items-center">
+                  <div className="flex space-x-1 ml-2">
+                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div
+                      className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
                   </div>
                 </div>
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="flex items-center gap-2 mt-4">
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Type your answer..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              className="flex-1 bg-[#141414] border border-gray-border rounded-md px-4 py-2 text-sm text-gray-300 placeholder:text-gray-500 h-10"
-              disabled={!waitingForInput}
-            />
-            <button
-              onClick={handleSend}
-              className={`px-3 py-2 rounded-md text-white text-sm w-[60px] h-10 ${
-                waitingForInput
-                  ? "bg-primary"
-                  : "bg-gray-500 cursor-not-allowed"
-              }`}
-              disabled={!waitingForInput}
-            >
-              {!waitingForInput ? (
-                <FaSyncAlt className="animate-spin mx-auto" />
-              ) : (
-                "Send"
-              )}
-            </button>
-          </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-      )}
+      </div>
+      <div className="pb-5 px-7 relative">
+        <input
+          name="hypothesis-input"
+          ref={inputRef}
+          type="text"
+          placeholder="Ask anything"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          className="w-full bg-background border border-stroke rounded-md py-4 py-2 text-md text-white placeholder:text-secondary"
+          disabled={!waitingForInput}
+        />
+        <button
+          onClick={handleSend}
+          className={`px-3 py-2 rounded-md text-white text-md h-10 absolute top-2 right-9 ${
+            waitingForInput ? "bg-primary" : "bg-gray-500 cursor-not-allowed"
+          }`}
+          disabled={!waitingForInput}
+        >
+          {!waitingForInput ? (
+            <TbRefresh className="animate-spin" />
+          ) : (
+            <TbArrowUp />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
