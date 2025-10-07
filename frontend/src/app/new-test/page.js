@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import ModalWrapper from "@/components/ModalWrapper";
+import Modal from "@/components/modal/Modal";
 import { useState } from "react";
 import FileDropZone from "@/components/FileDropZone";
 import Card, {
@@ -30,7 +30,7 @@ export default function NewTest() {
   } = useForm({
     defaultValues: {
       contactAsset: null,
-      tunnelUrl: "https://colony-poultry-rare-journalism.trycloudflare.com",
+      tunnelUrl: "https://origins-pichunter-yacht-stated.trycloudflare.com",
       githubUrl: "https://github.com/alchemix-finance/alchemix-v2-dao",
       projectDescription: "https://github.com/alchemix-finance/alchemix-v2-dao",
     },
@@ -279,40 +279,38 @@ export default function NewTest() {
         </div>
       </form>
       {showRef && (
-        <ModalWrapper>
-          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-            <div className="relative flex flex-col px-8 py-4 bg-surface border border-gray-border gap-4 rounded-lg w-full max-w-lg">
-              <button
-                type="button"
-                onClick={() => setShowRef(false)}
-                className="absolute top-4 right-4"
-              >
-                <Image src="/images/x.png" alt="Close" width={16} height={16} />
-              </button>
+        <Modal onChange={setShowRef} isShow={showRef}>
+          <div className="relative flex flex-col gap-4">
+            <button
+              type="button"
+              onClick={() => setShowRef(false)}
+              className="absolute top-0 right-0"
+            >
+              <Image src="/images/x.png" alt="Close" width={16} height={16} />
+            </button>
 
-              <div className="flex flex-col gap-1">
-                <p className="text-md font-semibold">References</p>
-                <p className="text-secondary">
-                  Identify smart contracts with similar vulnerabilities to
-                  support your hypothesis.
-                </p>
-              </div>
-
-              <References
-                clicked={selectedReference}
-                setClicked={setSelectedReference}
-              />
-
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-sm transition-all"
-                onClick={handleAttach}
-              >
-                Attach
-              </button>
+            <div className="flex flex-col gap-1">
+              <p className="text-md font-semibold">References</p>
+              <p className="text-secondary">
+                Identify smart contracts with similar vulnerabilities to support
+                your hypothesis.
+              </p>
             </div>
+
+            <References
+              clicked={selectedReference}
+              setClicked={setSelectedReference}
+            />
+
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-sm transition-all"
+              onClick={handleAttach}
+            >
+              Attach
+            </button>
           </div>
-        </ModalWrapper>
+        </Modal>
       )}
     </>
   );

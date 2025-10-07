@@ -1,21 +1,21 @@
 import { del, get, post } from "./utils";
 
-export const startRun = async (runId, formData) => {
+export const serviceStartRun = async (runId, formData) => {
   return post(`/runs/${runId}`, formData);
 };
 
-export const startRunChallenge = async (runId, challengeName, data) => {
+export const serviceStartRunChallenge = async (runId, challengeName, data) => {
   return post(`/runs/${challengeName}/${runId}`, data);
 };
 
-export const cancelRun = async (runId) => {
+export const serviceCancelRun = async (runId) => {
   return del(`/runs/${runId}/cancel`);
 };
 
-export const getRunStatus = async (runId) => {
+export const serviceGetRunStatus = async (runId) => {
   return get(`/runs/${runId}/status`);
 };
 
-export const saveWaitlistEmail = async (email) => {
+export const serviceSaveWaitlistEmail = async (email) => {
   return post(`/save-waitlist-email`, { email });
 };

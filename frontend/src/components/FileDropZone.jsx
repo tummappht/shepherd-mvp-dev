@@ -269,13 +269,13 @@ const FileDropZone = forwardRef(
             <p className="text-sm font-medium text-white">
               Selected Files ({files.length}/{maxFiles})
             </p>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-52 overflow-y-auto">
               {files.map((file, index) => (
                 <div
                   key={`${file.name}-${index}`}
-                  className="flex items-center justify-between p-3 bg-surface border border-gray-border rounded-lg hover:bg-surface-hover transition-colors"
+                  className="flex items-center justify-between p-3 pr-10 bg-surface border border-gray-border rounded-lg hover:bg-surface-hover transition-colors relative"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 overflow-hidden">
                     <div className="p-2 bg-primary/20 rounded">
                       <FaFile className="text-primary text-sm" />
                     </div>
@@ -295,7 +295,7 @@ const FileDropZone = forwardRef(
                       e.stopPropagation();
                       removeFile(index);
                     }}
-                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                    className="p-1 text-gray-400 hover:text-red-400 transition-colors absolute top-1/2 -translate-y-1/2 right-3"
                     title="Remove file"
                   >
                     <FaTimes className="text-sm" />

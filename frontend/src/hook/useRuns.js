@@ -1,15 +1,10 @@
 import { useSocketStatus } from "@/context/SocketStatusContext";
+import { serviceStartRun } from "@/services/runs";
+import { API_BASE } from "@/services/utils";
 import { useEffect, useMemo, useRef } from "react";
 
 export const useRuns = () => {
   const { setSocketStatus, socketStatus } = useSocketStatus();
-
-  const API_BASE = useMemo(() => {
-    return (
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "https://shepherd-mas-dev.fly.dev/"
-    ).replace(/\/+$/, "");
-  }, []);
 
   const makeRunId = () =>
     typeof crypto !== "undefined" && crypto.randomUUID
@@ -52,7 +47,7 @@ export const useRuns = () => {
     u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
     u.pathname = u.pathname.replace(/\/$/, "") + `/ws/${runId}`;
     return u.toString();
-  }, [API_BASE, runId]);
+  }, [runId]);
 
   // Singleton WebSocket connection per URL
   const getSingletonWS = (url) => {
@@ -71,19 +66,13 @@ export const useRuns = () => {
   //TODO: Refactor to use services and move websocket thing to useWebSocket
   const handleStartRun = async (formData) => {
     try {
-      const response = await fetch(`${API_BASE}/runs/${runId}`, {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-        },
-        body: formData,
-      });
+      const response = await serviceStartRun(runId, formData);
 
-      if (!response.ok) {
+      if (!response.success) {
         throw new Error(`API error: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = await response.data;
       return result;
     } catch (error) {
       console.error("Failed to start run:", error);

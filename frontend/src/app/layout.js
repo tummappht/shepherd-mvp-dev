@@ -1,6 +1,6 @@
 import { SocketStatusProvider } from "@/context/SocketStatusContext";
 import "./globals.css";
-import { SessionProvider } from "next-auth/react";
+import Providers from "@/components/layouts/Provider";
 
 export const metadata = {
   title: "Shepherd Security",
@@ -13,9 +13,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="bg-black text-white">
-        <SessionProvider>
+        <Providers>
           <SocketStatusProvider>{children}</SocketStatusProvider>
-        </SessionProvider>
+        </Providers>
       </body>
     </html>
   );

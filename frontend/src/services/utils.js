@@ -1,13 +1,10 @@
-export const API_BASE = () => {
-  return (process.env.NEXT_PUBLIC_API_BASE_URL || "https://test.dev/").replace(
-    /\/+$/,
-    ""
-  );
-};
+export const API_BASE = (
+  process.env.DEV_API_BASE_URL || "https://shepherd-mas-dev.fly.dev/"
+).replace(/\/+$/, "");
 
 export const getSocketUrl = (runId) => {
   if (!runId) return null;
-  const u = new URL(API_BASE());
+  const u = new URL(API_BASE);
   u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
   u.pathname = u.pathname.replace(/\/$/, "") + `/ws/${runId}`;
   return u.toString();
@@ -15,19 +12,22 @@ export const getSocketUrl = (runId) => {
 
 export const callService = async (path, options = {}) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = `${API_BASE()}${normalizedPath}`;
+  const url = `${API_BASE}${normalizedPath}`;
 
   const isFormData = options.body instanceof FormData;
-  const defaultHeaders = {
-    "Content-Type": isFormData ? undefined : "application/json",
-  };
+  if (!isFormData) {
+    options.headers = {
+      ...options.headers,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    };
+  }
 
   const config = {
-    ...options,
     headers: {
-      ...defaultHeaders,
       ...options.headers,
     },
+    ...options,
   };
 
   try {

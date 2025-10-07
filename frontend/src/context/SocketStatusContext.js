@@ -25,7 +25,6 @@ SocketStatusProvider.propTypes = {
 
 export function useSocketStatus() {
   const context = useContext(SocketStatusContext);
-  console.log("🚀 ~ useSocketStatus ~ context:", context);
   if (!context) {
     throw new Error(
       "useSocketStatus must be used within a SocketStatusProvider"

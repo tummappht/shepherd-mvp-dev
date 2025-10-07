@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { FaEdit, FaSyncAlt, FaWindowMinimize } from "react-icons/fa";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useRuns } from "@/hook/useRuns";
-import { TbArrowUp, TbCircle, TbEdit, TbRefresh } from "react-icons/tb";
+import { TbArrowUp, TbEdit } from "react-icons/tb";
 
-export default function Hypothesis({ id, title, onMinimize, minimized }) {
+export default function Hypothesis({ title, onMinimize, minimized }) {
   const {
     API_BASE,
     runId,
@@ -36,9 +35,9 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
   const repoUrl = searchParams.get("repoUrl");
 
   // ---- message processor (handles tagged envelopes and JSON) ----
-  const applyMessage = (text) => {
+  const applyMessage = (text, type = "description") => {
     setIsSystemThinking(false);
-    if (text) setMessages((prev) => [...prev, { from: "system", text }]);
+    if (text) setMessages((prev) => [...prev, { from: "system", text, type }]);
     setRunStatus("Started"); // Change from Initializing... status once the first message is sent
   };
 
@@ -59,6 +58,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
+      setWaitingForInput(false);
     } catch (error) {
       console.error("Failed to cancel run:", error);
     }
@@ -112,7 +112,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
   }, [API_BASE, runId]);
 
   const processRaw = (raw) => {
-    console.log("🚀 ~ processRaw ~ raw:", raw);
+    console.log("🚀 :", raw);
     // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
     if (typeof raw === "string") {
       const m = raw.match(/^<<<([A-Z_]+)>>>([\s\S]*?)<<<END_\1>>>$/);
@@ -127,13 +127,13 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
           .toLowerCase();
 
         if (tagLower === "description") {
-          applyMessage(inner?.message || inner?.text || "");
+          applyMessage(inner?.message || inner?.text || "", tagLower);
           cancelRun(501);
           return;
         }
         if (tagLower === "prompt") {
           const t = inner?.prompt || inner?.message || "";
-          if (t) applyMessage(t);
+          if (t) applyMessage(t, tagLower);
           setWaitingForInput(true);
           setTimeout(
             () => inputRef.current?.focus({ preventScroll: true }),
@@ -182,24 +182,24 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         }
         return;
       }
-      applyMessage(msg.data?.prompt || "");
+      applyMessage(msg.data?.prompt || "", t);
       setWaitingForInput(true);
       setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 100);
       return;
     }
     if (t === "description") {
       // backend might send {data: {message}} or just a string
-      applyMessage(msg.data?.message || msg.data || "");
+      applyMessage(msg.data?.message || msg.data || "", t);
       return;
     }
     // stream planner information
     if (t === "planner-step") {
-      applyMessage(msg.data?.content || msg.data || "");
+      applyMessage(msg.data?.content || msg.data || "", t);
       return;
     }
     // stream planner information
     if (t === "executor-tool-call") {
-      applyMessage(`Calling tool ${msg.data?.tool_name || "Unknown Tool"}`);
+      applyMessage(`Calling tool ${msg.data?.tool_name || "Unknown Tool"}`, t);
       return;
     }
     // stream tool result information
@@ -212,10 +212,11 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
       if (status === "error" || errorType) {
         applyMessage(
-          `${toolName}: ERROR - ${errorType || reason || "Unknown error"}`
+          `${toolName}: ERROR - ${errorType || reason || "Unknown error"}`,
+          t
         );
       } else {
-        applyMessage(`${toolName}: ${status} - ${output}`);
+        applyMessage(`${toolName}: ${status} - ${output}`, t);
       }
       return;
     }
@@ -223,13 +224,17 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
       applyMessage(
         `${msg.data?.agent_type || "Unknown"} agent:\n${
           msg.data?.content || msg.data || ""
-        }`
+        }`,
+        t
       );
       return;
     }
     if (t === "output" || t === "stdout" || t === "log") {
       applyMessage(
-        typeof msg.data === "string" ? msg.data.trim() : msg.data?.message || ""
+        typeof msg.data === "string"
+          ? msg.data.trim()
+          : msg.data?.message || "",
+        t
       );
       return;
     }
@@ -252,7 +257,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         typeof msg.data === "string"
           ? msg.data.trim()
           : msg.data?.message || "An error occurred";
-      applyMessage(`Error: ${errorMsg}`);
+      applyMessage(`Error: ${errorMsg}`, t);
       cancelRun(503); // Cancel the run
       return;
     }
@@ -261,7 +266,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         typeof msg.data === "string"
           ? msg.data.trim()
           : msg.data?.message || "An error occurred";
-      applyMessage(`Error: ${errorMsg}`);
+      applyMessage(`Error: ${errorMsg}`, t);
       cancelRun(504); // Cancel the run
       setRunStatus("Error");
       setWaitingForInput(true);
@@ -280,31 +285,6 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         try {
           let socketStatus = contextSocketStatus;
           let responseStatus = null;
-          const body = repoUrl ? { github_url: repoUrl } : {};
-          const repoUrlTrimmed = repoUrl?.trim();
-
-          let fetch_url = ``;
-          const repoMap = {
-            "https://github.com/dhruvjain2905/naive-receiver": "dvd2",
-            "https://github.com/dhruvjain2905/Truster": "dvd3",
-            "https://github.com/dhruvjain2905/Unstoppable": "dvd1",
-            "https://github.com/tunonraksa/puppet-deploy": "dvd8",
-          };
-
-          if (repoUrlTrimmed && repoMap[repoUrlTrimmed]) {
-            await cancelRun(0); // cancel any existing run with the same runId before starting a new one
-            fetch_url = `${API_BASE}/runs/${repoMap[repoUrlTrimmed]}/${runId}`;
-            const response = await fetch(fetch_url, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(body),
-            });
-            responseStatus = response.status;
-
-            const result = await response.json();
-            socketStatus = result.status;
-            console.log(result);
-          }
 
           if (socketStatus === "started") {
             const socket = getSingletonWS(socketUrl);
@@ -384,7 +364,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
 
       startRunThenSocket();
     }
-  }, [socketUrl, API_BASE, repoUrl, runId]);
+  }, [socketUrl, repoUrl, runId]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -422,7 +402,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         console.log("CANCELING");
         socketRef.current?.send(JSON.stringify({ type: "input", data: input }));
         setInput("");
-        applyMessage("Session has ended successfully.");
+        applyMessage("Session has ended successfully.", "end");
         cancelRun(505);
         setWaitingForInput(false);
         return;
@@ -448,6 +428,58 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     }
   }, [runStatus]);
 
+  const renderMessagePrefix = (msg, index, messages) => {
+    const isFromUser = msg.from === "user";
+    if (isFromUser) {
+      return <></>;
+    }
+
+    const isPrompt = msg.type === "prompt";
+    const isRenderLine = index !== messages.length - 1 && !isPrompt;
+    const circleColor = isPrompt ? "border-primary" : " border-white";
+
+    return (
+      <>
+        <span
+          className={`border ${circleColor} w-2 h-2 absolute top-2 left-2 rounded-full `}
+        />
+        {isRenderLine ? (
+          <span className="border border-secondary border-dashed absolute top-6 left-[11px] h-[calc(100%-1rem)]" />
+        ) : null}
+      </>
+    );
+  };
+
+  const renderMessage = (msg) => {
+    const isFromUser = msg.from === "user";
+    if (isFromUser) {
+      return (
+        <span
+          className={`whitespace-pre-wrap background-light text-white border border-stroke-light py-3 px-5 rounded-lg w-full`}
+        >
+          {msg.text}
+        </span>
+      );
+    }
+
+    const isWhiteText = msg.type === "prompt" || msg.type === "end";
+    const textColor = isWhiteText ? "text-white" : "text-secondary";
+
+    if (isRenderAsMarkdown(msg.text)) {
+      return (
+        <div className={`pl-7 ${textColor}`}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+        </div>
+      );
+    } else {
+      return (
+        <span className={`whitespace-pre-wrap pl-7 ${textColor}`}>
+          {msg.text}
+        </span>
+      );
+    }
+  };
+
   return (
     <div className="text-white w-full bg-surface flex flex-col flex-1 min-h-0">
       <div className="flex items-center justify-between px-9 py-6 border-b border-stroke">
@@ -465,23 +497,11 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
       </div>
 
       <div className="flex flex-col flex-1 px-7 py-3 min-h-0">
-        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+        <div className="flex-1 overflow-y-auto space-y-2">
           {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`flex gap-3 text-secondary relative pl-7`}
-            >
-              <span className="border border-white w-2 h-2 absolute top-2 left-2 rounded-full" />
-              {index !== messages.length - 1 ? (
-                <span className="border border-secondary border-dashed absolute top-6 left-[11px] h-[calc(100%-1rem)]" />
-              ) : null}
-              {isRenderAsMarkdown(msg.text) ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.text}
-                </ReactMarkdown>
-              ) : (
-                <span className="whitespace-pre-wrap">{msg.text}</span>
-              )}
+            <div key={index} className={`flex gap-3 relative`}>
+              {renderMessagePrefix(msg, index, messages)}
+              {renderMessage(msg)}
             </div>
           ))}
           {isSystemThinking && !waitingForInput && (
@@ -525,11 +545,7 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
           }`}
           disabled={!waitingForInput}
         >
-          {!waitingForInput ? (
-            <TbRefresh className="animate-spin" />
-          ) : (
-            <TbArrowUp />
-          )}
+          <TbArrowUp />
         </button>
       </div>
     </div>
