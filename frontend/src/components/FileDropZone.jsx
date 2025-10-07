@@ -13,8 +13,6 @@ const FileDropZone = forwardRef(
   (
     {
       name,
-      value,
-      onBlur,
       onChange,
       acceptedFileTypes = "",
       maxFileSize = 10 * 1024 * 1024, // 10MB default
@@ -141,6 +139,9 @@ const FileDropZone = forwardRef(
         onChange(updatedFiles);
       }
       setError("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     };
 
     const openFileDialog = () => {
