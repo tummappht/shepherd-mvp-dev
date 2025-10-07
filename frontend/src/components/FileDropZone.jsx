@@ -13,8 +13,6 @@ const FileDropZone = forwardRef(
   (
     {
       name,
-      value,
-      onBlur,
       onChange,
       acceptedFileTypes = "",
       maxFileSize = 10 * 1024 * 1024, // 10MB default
@@ -38,6 +36,9 @@ const FileDropZone = forwardRef(
         clearFiles: () => {
           setFiles([]);
           setError("");
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
           if (onChange) onChange([]);
         },
       }),
@@ -82,15 +83,30 @@ const FileDropZone = forwardRef(
           return;
         }
 
-        // Validate each file
+        // Validate each file and check for duplicates
         const validFiles = [];
+        const existingFileNames = files.map((f) => f.name);
+        const duplicates = [];
+
         for (const file of fileArray) {
           const validationError = validateFile(file);
           if (validationError) {
             setError(validationError);
             return;
           }
-          validFiles.push(file);
+
+          // Check for duplicate file names
+          if (existingFileNames.includes(file.name)) {
+            duplicates.push(file.name);
+          } else {
+            validFiles.push(file);
+          }
+        }
+
+        // Show error if duplicates found
+        if (duplicates.length > 0) {
+          setError(`File(s) already added: ${duplicates.join(", ")}`);
+          return;
         }
 
         // Update files state
@@ -141,6 +157,9 @@ const FileDropZone = forwardRef(
         onChange(updatedFiles);
       }
       setError("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     };
 
     const openFileDialog = () => {

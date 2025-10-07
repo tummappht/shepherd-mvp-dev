@@ -42,29 +42,6 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
     setRunStatus("Started"); // Change from Initializing... status once the first message is sent
   };
 
-  const triggerMockMarkdown = () => {
-    const mock = {
-      type: "agent",
-      data: {
-        tag_type: "agent",
-        timestamp: "2025-09-21T05:03:23.774794+00:00",
-        agent_type: "reporter",
-        content:
-          "| Problems Found                             | Where Found (Snippet/Line)                                               | Mitigation / Improvements                                    |\n|--------------------------------------------|--------------------------------------------------------------------------|----------------------------------------------------------------|\n| Misappropriation of FlashLoan fees due to repeated calls in a single transaction. | Located in the NaiveReceiverPool.flashLoan function through the multicall and meta-transaction execution route. | The contract should implement checks to limit the number of flashLoan calls that can be triggered in a single transaction. Consider rate limiting or imposing additional checks on the transaction initiator. |\n| Fixed fee logic is susceptible to zero-amount exploits. | Exploit realized by calling flashLoan with amount 0, causing fees to transfer without principal. | Adjust fee calculation logic to ensure that fees are proportionate to the loan amount rather than a flat rate, and impose a minimum loan amount for fee applicability. |\n| Multicall allows unforeseen exploitation.   | Exploitation allowed by combining calls within a multicall structure, bypassing individual transaction checks. | Add logic to prevent multicall abuses, such as requiring business-logic checks within loops or combinations triggered by multicalls. |\n\nThis table identifies key vulnerabilities and suggests potential mitigations to enhance the security of the smart contract.",
-        is_markdown_table: true,
-      },
-      tag_type: "AGENT",
-      stream_id: "stream_2",
-      stream_complete: true,
-    };
-    applyMessage(
-      `${mock.data?.agent_type || "Unknown"} agent:\n${
-        mock.data?.content || mock.data || ""
-      }`
-    );
-    console.log("🚀 ~ triggerMockMarkdown ~ mock:", mock);
-  };
-
   // Auto-focus input when waiting for user input
   useEffect(() => {
     if (waitingForInput && inputRef.current) {
@@ -82,7 +59,6 @@ export default function Hypothesis({ id, title, onMinimize, minimized }) {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
-      // console.log("Run canceled")
     } catch (error) {
       console.error("Failed to cancel run:", error);
     }
