@@ -9,7 +9,7 @@ export default function Dashboard() {
     <>
       <div className="container mx-auto flex flex-col gap-4 h-full">
         <div
-          className="py-6 px-8 bg-background border border-stroke rounded-lg overflow-hidden flex flex-col"
+          className="py-4 px-6 md:py-6 md:px-8 bg-background border border-stroke rounded-lg overflow-hidden flex flex-col transition-all"
           style={{ height: "70%" }}
         >
           <CollectionPanel
@@ -20,7 +20,7 @@ export default function Dashboard() {
             <Repositories />
           </CollectionPanel>
         </div>
-        <div className="py-6 px-8 bg-background border border-stroke rounded-lg overflow-hidden flex flex-col flex-1">
+        <div className="py-4 px-6 md:py-6 md:px-8 bg-background border border-stroke rounded-lg overflow-hidden flex flex-col flex-1 transition-all">
           <CollectionPanel
             title="Ground Truths"
             description="Identify smart contracts and reports with similar vulnerabilities to support your hypothesis."
