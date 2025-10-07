@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import Modal from "./modal/Modal";
 import FileDropZone from "./FileDropZone";
-import { FaSyncAlt } from "react-icons/fa";
+import { serviceReportIssue } from "@/services/report";
 
 export default function ReportBugModal({ isOpen, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,7 +16,7 @@ export default function ReportBugModal({ isOpen, onClose }) {
   } = useForm({
     defaultValues: {
       description: "",
-      screenshots: null,
+      images: null,
     },
   });
 
@@ -24,30 +24,26 @@ export default function ReportBugModal({ isOpen, onClose }) {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("description", data.description);
+      formData.append("text", data.description);
 
-      // Append multiple screenshots
-      if (data.screenshots && data.screenshots.length > 0) {
-        Array.from(data.screenshots).forEach((file, index) => {
-          formData.append(`screenshot_${index}`, file);
+      // Append multiple images
+      if (data.images && data.images.length > 0) {
+        Array.from(data.images).forEach((file, index) => {
+          formData.append("images", file);
         });
       }
 
-      // TODO: Replace with your actual API endpoint
-      // const response = await fetch('/api/report-bug', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
+      const response = await serviceReportIssue(formData);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (!response.success) {
+        throw new Error(`API error: ${response.status}`);
+      }
 
-      alert("Bug report submitted successfully!");
       reset();
       onClose();
     } catch (error) {
+      alert("Failed to submit bug report. Please try again later.");
       console.error("Error submitting bug report:", error);
-      alert("Failed to submit bug report. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -87,10 +83,6 @@ export default function ReportBugModal({ isOpen, onClose }) {
               placeholder="Please describe the bug, including what you expected to happen and what actually happened..."
               {...register("description", {
                 required: "Description is required",
-                minLength: {
-                  value: 10,
-                  message: "Please provide at least 10 characters",
-                },
               })}
               aria-invalid={errors.description ? "true" : "false"}
               disabled={isSubmitting}
@@ -109,7 +101,7 @@ export default function ReportBugModal({ isOpen, onClose }) {
             </label>
             <Controller
               control={control}
-              name="screenshots"
+              name="images"
               render={({ field }) => (
                 <FileDropZone
                   size="small"
@@ -144,11 +136,7 @@ export default function ReportBugModal({ isOpen, onClose }) {
             }`}
             disabled={isSubmitting}
           >
-            {isSubmitting ? (
-              <FaSyncAlt className="animate-spin text-base" />
-            ) : (
-              "Submit"
-            )}
+            Submit
           </button>
         </div>
       </form>

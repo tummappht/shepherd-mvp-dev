@@ -8,9 +8,13 @@ import {
   TbBug,
   TbBrandTelegram,
   TbMessageChatbot,
+  TbLogout,
+  TbUser,
+  TbSettings,
 } from "react-icons/tb";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import ReportBugModal from "../ReportBugModal";
+import Dropdown from "../Dropdown";
 
 const MENU_ITEMS = [
   {
@@ -35,10 +39,20 @@ const MENU_ITEMS = [
   },
 ];
 
+const DROPDOWN_ITEMS = [
+  {
+    label: "Logout",
+    icon: TbLogout,
+    action: "logout",
+    danger: true,
+  },
+];
+
 export default function Sidebar({ isStaticLayout }) {
   const { data: session } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showBugModal, setShowBugModal] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const userName = session?.user?.name || "Guest";
   const userImage = session?.user?.image || "/images/pfp.png";
@@ -51,6 +65,17 @@ export default function Sidebar({ isStaticLayout }) {
   const handleMenuClick = (action) => {
     if (action === "reportBug") {
       setShowBugModal(true);
+    }
+  };
+
+  const handleDropdownClick = async (action, href) => {
+    if (action === "logout") {
+      await signOut({
+        callbackUrl: "/login",
+        redirect: true,
+      });
+    } else if (href) {
+      setShowDropdown(false);
     }
   };
 
@@ -178,16 +203,20 @@ export default function Sidebar({ isStaticLayout }) {
 
         {/* User Info Section */}
         <div
-          className={`w-full  py-6 mt-auto border-t border-stroke ${
+          className={`w-full py-6 mt-auto border-t border-stroke ${
             isCollapsed ? "px-4" : "px-6"
-          }`}
+          } relative`}
         >
           <div
             className={`flex items-center ${
               isCollapsed ? "flex-col gap-2" : "gap-3"
             }`}
           >
-            <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="relative flex-shrink-0 rounded-md hover:ring-2 hover:ring-primary transition-all focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="User menu"
+            >
               <Image
                 src={userImage}
                 alt={`${userName}'s profile picture`}
@@ -195,7 +224,7 @@ export default function Sidebar({ isStaticLayout }) {
                 height={36}
                 className="rounded-md border border-gray-700"
               />
-            </div>
+            </button>
 
             <div
               className={`flex flex-col min-w-0 transition-all duration-300 ${
@@ -233,6 +262,15 @@ export default function Sidebar({ isStaticLayout }) {
               )}
             </button>
           </div>
+
+          {/* Dropdown Menu */}
+          <Dropdown
+            isOpen={showDropdown}
+            onClose={() => setShowDropdown(false)}
+            items={DROPDOWN_ITEMS}
+            onItemClick={handleDropdownClick}
+            position={isCollapsed ? "top-center" : "top-left"}
+          />
         </div>
       </aside>
 

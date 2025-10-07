@@ -9,6 +9,7 @@ import Card, {
 import { FaSyncAlt, FaGithub, FaExclamationTriangle } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
