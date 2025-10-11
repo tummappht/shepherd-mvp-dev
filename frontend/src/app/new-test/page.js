@@ -12,10 +12,10 @@ import Card, {
 import { FaSyncAlt, FaTimes } from "react-icons/fa";
 import { useRuns } from "@/hook/useRuns";
 import { useForm, Controller } from "react-hook-form";
-import References from "@/components/listItem/References";
+import ReferenceModal from "./_components/ReferenceModal";
 
 export default function NewTest() {
-  const [showRef, setShowRef] = useState(false);
+  const [isShowRef, setIsShowRef] = useState(false);
   const [selectedReference, setSelectedReference] = useState(null);
   const [attachedReference, setAttachedReference] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,16 +30,17 @@ export default function NewTest() {
   } = useForm({
     defaultValues: {
       contactAsset: null,
-      tunnelUrl: "https://origins-pichunter-yacht-stated.trycloudflare.com",
+      tunnelUrl: "https://packard-newton-stripes-date.trycloudflare.com",
       githubUrl: "https://github.com/alchemix-finance/alchemix-v2-dao",
-      projectDescription: "https://github.com/alchemix-finance/alchemix-v2-dao",
+      projectDescription:
+        "protocol documentation to help better inform the repository.",
     },
   });
 
   const handleAttach = () => {
     if (selectedReference) {
       setAttachedReference(selectedReference);
-      setShowRef(false);
+      setIsShowRef(false);
     }
   };
 
@@ -222,7 +223,7 @@ export default function NewTest() {
                 <button
                   type="button"
                   className="w-full flex flex-row items-center justify-center px-4 py-1 gap-2 rounded-lg bg-gray-border"
-                  onClick={() => setShowRef(true)}
+                  onClick={() => setIsShowRef(true)}
                 >
                   <p className="text-lg text-helper">+</p>
                   <p className="text-sm font-semibold text-helper">
@@ -278,40 +279,13 @@ export default function NewTest() {
           </button>
         </div>
       </form>
-      {showRef && (
-        <Modal onChange={setShowRef} isShow={showRef}>
-          <div className="relative flex flex-col gap-4">
-            <button
-              type="button"
-              onClick={() => setShowRef(false)}
-              className="absolute top-0 right-0"
-            >
-              <Image src="/images/x.png" alt="Close" width={16} height={16} />
-            </button>
-
-            <div className="flex flex-col gap-1">
-              <p className="text-md font-semibold">References</p>
-              <p className="text-secondary">
-                Identify smart contracts with similar vulnerabilities to support
-                your hypothesis.
-              </p>
-            </div>
-
-            <References
-              clicked={selectedReference}
-              setClicked={setSelectedReference}
-            />
-
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-sm transition-all"
-              onClick={handleAttach}
-            >
-              Attach
-            </button>
-          </div>
-        </Modal>
-      )}
+      <ReferenceModal
+        isShow={isShowRef}
+        setIsShow={setIsShowRef}
+        handleAttach={handleAttach}
+        selectedReference={selectedReference}
+        setSelectedReference={setSelectedReference}
+      />
     </>
   );
 }
