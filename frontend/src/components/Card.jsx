@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import PropTypes from "prop-types";
 
 export function CardTitle({ children, className = "" }) {

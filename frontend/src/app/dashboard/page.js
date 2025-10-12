@@ -4,6 +4,8 @@ import References from "@/components/listItem/References";
 import CollectionPanel from "@/components/CollectionPanel";
 import WelcomeModal from "@/components/WelcomeModal";
 
+//TODO: Porto: Revised for the payment
+//TODO: New Domain for V2
 export default function Dashboard() {
   return (
     <>
