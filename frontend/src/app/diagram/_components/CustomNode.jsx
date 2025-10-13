@@ -1,5 +1,7 @@
+"use client";
+
 import { useState } from "react";
-import { TbCaretDown, TbMaximize, TbX } from "react-icons/tb";
+import { TbCaretDown, TbMaximize } from "react-icons/tb";
 import { Handle, Position } from "reactflow";
 
 export default function CustomNode({ data, onOpenDetail }) {
@@ -30,42 +32,14 @@ export default function CustomNode({ data, onOpenDetail }) {
     >
       <Handle
         type="source"
-        position={Position.Right}
-        className={`${getColor()} w-2 h-2`}
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        className={`${getColor()} w-2 h-2`}
-      />
-      <Handle
-        type="source"
-        position={Position.Top}
-        className={`${getColor()} w-2 h-2`}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className={`${getColor()} w-2 h-2`}
-      />
-      <Handle
-        type="target"
+        id="right"
         position={Position.Right}
         className={`${getColor()} w-2 h-2`}
       />
       <Handle
         type="target"
+        id="left"
         position={Position.Left}
-        className={`${getColor()} w-2 h-2`}
-      />
-      <Handle
-        type="target"
-        position={Position.Top}
-        className={`${getColor()} w-2 h-2`}
-      />
-      <Handle
-        type="target"
-        position={Position.Bottom}
         className={`${getColor()} w-2 h-2`}
       />
 
@@ -189,169 +163,5 @@ export default function CustomNode({ data, onOpenDetail }) {
         )}
       </div>
     </div>
-  );
-}
-
-// Export the Drawer component separately
-export function ExecutionDetailDrawer({
-  execution,
-  contractName,
-  isOpen,
-  onClose,
-}) {
-  if (!isOpen || !execution) return null;
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(JSON.stringify(execution, null, 2));
-  };
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Drawer */}
-      <div
-        className="fixed right-0 top-0 h-full w-full max-w-2xl bg-slate-900 shadow-2xl z-50 overflow-y-auto transform transition-transform"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-6 flex items-start justify-between">
-          <div>
-            <div className="text-xs text-slate-500 mb-1">{contractName}</div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <span
-                className={
-                  execution.status === "success"
-                    ? "text-green-400"
-                    : "text-red-400"
-                }
-              >
-                {execution.status === "success" ? "✓" : "✗"}
-              </span>
-              {execution.tool_name}
-            </h2>
-            <p className="text-sm text-slate-400 mt-2">
-              {new Date(execution.call_timestamp).toLocaleString()}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-lg"
-          >
-            <TbX className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Status */}
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Status
-            </h3>
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium ${
-                execution.status === "success"
-                  ? "bg-green-500/20 text-green-300"
-                  : "bg-red-500/20 text-red-300"
-              }`}
-            >
-              <span>{execution.status === "success" ? "✓" : "✗"}</span>
-              {execution.status.toUpperCase()}
-            </div>
-          </div>
-
-          {/* Timestamps */}
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Timestamps
-            </h3>
-            <div className="bg-slate-800 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-sm">Call Started</span>
-                <span className="text-white font-mono text-sm">
-                  {new Date(execution.call_timestamp).toLocaleString()}
-                </span>
-              </div>
-              {execution.timestamp && (
-                <>
-                  <div className="border-t border-slate-700 my-2" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 text-sm">
-                      Result Received
-                    </span>
-                    <span className="text-white font-mono text-sm">
-                      {new Date(execution.timestamp).toLocaleString()}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Reason (if failed) */}
-          {execution.reason && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                Error Reason
-              </h3>
-              <div className="bg-red-950/50 border border-red-900/50 rounded-lg p-4">
-                <p className="text-red-200 whitespace-pre-wrap">
-                  {execution.reason}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Tool Output */}
-          {execution.tool_output &&
-            execution.tool_output !== "None" &&
-            execution.tool_output !== "{}" && (
-              <div>
-                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                  Tool Output
-                </h3>
-                <div className="bg-slate-950 border border-slate-700 rounded-lg p-4 overflow-x-auto">
-                  <pre className="text-sm text-green-400 font-mono">
-                    {JSON.stringify(JSON.parse(execution.tool_output), null, 2)}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-          {/* Raw Data */}
-          <div>
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Raw Execution Data
-            </h3>
-            <div className="bg-slate-950 border border-slate-700 rounded-lg p-4 overflow-x-auto">
-              <pre className="text-xs text-slate-300 font-mono">
-                {JSON.stringify(execution, null, 2)}
-              </pre>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={copyToClipboard}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-colors font-medium"
-            >
-              Copy Full Details
-            </button>
-            <button
-              onClick={onClose}
-              className="px-6 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-lg transition-colors font-medium"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
   );
 }

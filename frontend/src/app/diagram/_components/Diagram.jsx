@@ -9,7 +9,8 @@ import ReactFlow, {
   MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import CustomNode, { ExecutionDetailDrawer } from "./CustomNode";
+import CustomNode from "./CustomNode";
+import { ExecutionDetailDrawer } from "./ExecutionDetailDrawer";
 //TODO: Need to improve drawer
 
 const webSocketMessages = [
@@ -53,7 +54,7 @@ const webSocketMessages = [
     type: "receive",
     time: 1760171658.2408571,
     opcode: 1,
-    data: '{"type":"executor-tool-call","data":{"tag_type":"executor_tool_call","timestamp":"2025-10-11T08:34:18.060358+00:00","tool_name":"send_transaction_tool","contracts":["Voter"]},"tag_type":"EXECUTOR_TOOL_CALL","stream_id":"stream_124","stream_complete":true}',
+    data: '{"type":"executor-tool-call","data":{"tag_type":"executor_tool_call","timestamp":"2025-10-11T08:34:18.060358+00:00","tool_name":"send_transaction_tool","contracts":["VoterMeToBePresidentThisYear"]},"tag_type":"EXECUTOR_TOOL_CALL","stream_id":"stream_124","stream_complete":true}',
   },
   {
     type: "receive",
@@ -180,9 +181,11 @@ export default function AgentWorkflowDiagram() {
 
   const initialNodes = useMemo(() => {
     const contracts = Array.from(contractsMap.values());
-    const centerX = 500;
-    const centerY = 400;
-    const radius = 350;
+    const agentX = 100;
+    const agentY = 300;
+    const contractStartX = 500;
+    const contractStartY = 50;
+    const verticalSpacing = 150;
 
     const nodes = [
       {
@@ -192,17 +195,11 @@ export default function AgentWorkflowDiagram() {
           label: "Agent: Reporter",
           type: "agent",
         },
-        position: { x: centerX - 110, y: centerY - 60 },
+        position: { x: agentX, y: agentY },
       },
     ];
 
-    const angleStep = (2 * Math.PI) / contracts.length;
-
     contracts.forEach((contract, idx) => {
-      const angle = idx * angleStep - Math.PI / 2;
-      const x = centerX + radius * Math.cos(angle) - 110;
-      const y = centerY + radius * Math.sin(angle) - 60;
-
       nodes.push({
         id: contract.name,
         type: "custom",
@@ -213,7 +210,10 @@ export default function AgentWorkflowDiagram() {
           failures: contract.failures,
           executions: contract.executions,
         },
-        position: { x, y },
+        position: {
+          x: contractStartX,
+          y: contractStartY + idx * verticalSpacing,
+        },
       });
     });
 
@@ -223,16 +223,14 @@ export default function AgentWorkflowDiagram() {
   const initialEdges = useMemo(() => {
     return edgesData.map((edge, idx) => {
       const isSuccess = edge.status === "success";
-      const label = edge.reason
-        ? `${edge.tool_name}\n${edge.reason}`
-        : edge.tool_name;
 
       return {
         id: `e-${idx}`,
         source: "agent-reporter",
         target: edge.contract,
-        label,
-        type: "smoothstep",
+        sourceHandle: "right",
+        targetHandle: "left",
+        type: "bezier",
         animated: isSuccess,
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -241,17 +239,6 @@ export default function AgentWorkflowDiagram() {
         style: {
           stroke: isSuccess ? "#34d399" : "#fb7185",
           strokeWidth: 3,
-        },
-        labelStyle: {
-          fill: "#fff",
-          fontSize: "11px",
-          fontWeight: 600,
-        },
-        labelBgStyle: {
-          fill: isSuccess ? "#065f46" : "#991b1b",
-          fillOpacity: 0.9,
-          rx: 6,
-          ry: 6,
         },
       };
     });
@@ -285,9 +272,9 @@ export default function AgentWorkflowDiagram() {
         <Background
           variant="dots"
           gap={20}
-          size={1.5}
-          color="rgba(167, 139, 250, 0.3)"
-          style={{ background: "#0f0f23" }}
+          size={2}
+          color="#1e293b"
+          className="bg-surface"
         />
       </ReactFlow>
 

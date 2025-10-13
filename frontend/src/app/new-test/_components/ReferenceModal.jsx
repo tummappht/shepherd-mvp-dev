@@ -1,6 +1,7 @@
 import References from "@/components/listItem/References";
 import Modal from "@/components/modal/Modal";
 import Image from "next/image";
+import { TbX } from "react-icons/tb";
 
 const ReferenceModal = ({
   isShow,
@@ -14,10 +15,10 @@ const ReferenceModal = ({
       <button
         type="button"
         onClick={() => setIsShow(false)}
-        className="absolute top-0 right-0 p-1 rounded hover:bg-gray-200"
+        className="absolute top-0 right-0 text-secondary hover:bg-surface-hover transition-all duration-200 focus:outline-none rounded p-1.5 ml-auto"
         aria-label="Close modal"
       >
-        <Image src="/images/x.png" alt="Close" width={16} height={16} />
+        <TbX />
       </button>
 
       <div className="flex flex-col gap-1">
@@ -35,7 +36,7 @@ const ReferenceModal = ({
 
       <button
         type="button"
-        className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-offset"
+        className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-offset h-12"
         onClick={handleAttach}
         disabled={!selectedReference}
         aria-label="Attach selected reference"
