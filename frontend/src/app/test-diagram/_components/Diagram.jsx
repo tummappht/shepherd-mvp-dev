@@ -11,6 +11,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import CustomNode from "./CustomNode";
 import { ExecutionDetailDrawer } from "@/components/diagram/ExecutionDetailDrawer";
+
 //TODO: Need to improve drawer
 const webSocketMessages = [
   {
