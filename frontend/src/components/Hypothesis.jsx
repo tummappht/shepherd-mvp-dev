@@ -5,8 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useRuns } from "@/hook/useRuns";
-import { TbArrowUp, TbEdit } from "react-icons/tb";
-import { webSocketMessagesS1 } from "@/mocks/mockSocketS1";
+import { TbEdit } from "react-icons/tb";
 import TreeCheckboxList from "./TreeCheckbox";
 import HypothesisInput from "./hypothesis/HypothesisInput";
 
@@ -111,15 +110,6 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [API_BASE, runId]);
-
-  useEffect(() => {
-    webSocketMessagesS1.forEach((msg) => {
-      setTimeout(() => {
-        processRaw(msg.data);
-      }, 5000);
-    });
-    setRunStatus("Started");
-  }, []);
 
   const processRaw = (raw) => {
     console.log("🚀 :", raw);
