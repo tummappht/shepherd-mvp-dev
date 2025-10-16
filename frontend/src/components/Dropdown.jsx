@@ -3,15 +3,6 @@
 import { useRef, useEffect } from "react";
 import Link from "next/link";
 
-/**
- * Reusable Dropdown Component
- * @param {boolean} isOpen - Controls dropdown visibility
- * @param {function} onClose - Callback to close dropdown
- * @param {array} items - Array of dropdown items with shape: { label, icon, href?, action?, danger? }
- * @param {function} onItemClick - Callback when item is clicked (receives action, href)
- * @param {string} position - Position relative to trigger: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
- * @param {string} className - Additional CSS classes
- */
 export default function Dropdown({
   isOpen,
   onClose,

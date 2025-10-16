@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { TbX } from "react-icons/tb";
 
 export function ExecutionDetailDrawer({
@@ -10,9 +11,25 @@ export function ExecutionDetailDrawer({
 }) {
   if (!isOpen || !execution) return null;
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(JSON.stringify(execution, null, 2));
+  const copyToClipboard = (message) => {
+    navigator.clipboard.writeText(message);
   };
+
+  const toolOutput = useMemo(() => {
+    try {
+      const toolOutput = execution.tool_output;
+      const validJsonString = toolOutput.replace(/'/g, '"');
+
+      const formattedOutput = JSON.stringify(
+        JSON.parse(validJsonString),
+        null,
+        2
+      );
+      return formattedOutput;
+    } catch (e) {
+      return "{}";
+    }
+  }, [execution.tool_output]);
 
   return (
     <>
@@ -73,34 +90,24 @@ export function ExecutionDetailDrawer({
           )}
 
           {/* Tool Output */}
-          {execution.tool_output &&
-            execution.tool_output !== "None" &&
-            execution.tool_output !== "{}" && (
-              <div>
-                <h3 className="text-md text-white mb-2">Tool Output</h3>
+          {toolOutput && (
+            <div>
+              <h3 className="text-md text-white mb-2">Tool Output</h3>
+              <div className="relative">
                 <div className="bg-surface border border-stroke rounded-lg p-4 overflow-x-auto">
-                  <pre className="text-sm text-white font-mono">
-                    {JSON.stringify(JSON.parse(execution.tool_output), null, 2)}
+                  <pre className="text-xs text-white font-mono">
+                    {toolOutput}
                   </pre>
+                  <button
+                    onClick={() => copyToClipboard(toolOutput)}
+                    className="absolute right-2 top-2 text-sm text-secondary hover:bg-surface-hover transition-all duration-200 focus:outline-none rounded p-1.5"
+                  >
+                    Copy
+                  </button>
                 </div>
               </div>
-            )}
-
-          {/* Raw Data */}
-          <div>
-            <h3 className="text-md text-white mb-2">Raw Execution Data</h3>
-            <div className="bg-surface border border-stroke rounded-lg p-4 overflow-x-auto relative">
-              <pre className="text-xs text-slate-300 font-mono">
-                {JSON.stringify(execution, null, 2)}
-              </pre>
-              <button
-                onClick={copyToClipboard}
-                className="absolute right-2 top-2 text-sm text-secondary hover:bg-surface-hover transition-all duration-200 focus:outline-none rounded p-1.5"
-              >
-                Copy
-              </button>
             </div>
-          </div>
+          )}
         </div>
         {/* Actions */}
         <div className="flex gap-3 p-4">
