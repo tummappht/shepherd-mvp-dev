@@ -5,7 +5,7 @@ import { TbArrowUp } from "react-icons/tb";
 import TreeCheckboxList from "../TreeCheckbox";
 import { useForm, Controller } from "react-hook-form";
 
-export default function CustomNode({
+export default function HypothesisInput({
   waitingForInput = false,
   options = [],
   handleSend = () => {},

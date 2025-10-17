@@ -6,8 +6,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useRuns } from "@/hook/useRuns";
 import { TbEdit } from "react-icons/tb";
-import TreeCheckboxList from "./TreeCheckbox";
-import HypothesisInput from "./hypothesis/HypothesisInput";
+import HypothesisInput from "./HypothesisInput";
+import TreeCheckboxList from "../TreeCheckbox";
 
 export default function Hypothesis({ title, onMinimize, minimized }) {
   const {
@@ -408,6 +408,7 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
     setMessages((prev) => [...prev, { from: "user", text: value, type }]);
     socketRef.current?.send(JSON.stringify({ type: "input", data: value }));
     setWaitingForInput(false);
+    setOptions([]);
   };
 
   const statusColor = useMemo(() => {

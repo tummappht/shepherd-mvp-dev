@@ -1,5 +1,5 @@
 export const API_BASE = (
-  process.env.DEV_API_BASE_URL || "https://shepherd-mas-dev.fly.dev/"
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://mas-v2-dev.fly.dev/"
 ).replace(/\/+$/, "");
 
 export const getSocketUrl = (runId) => {
