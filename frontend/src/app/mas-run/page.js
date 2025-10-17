@@ -1,7 +1,7 @@
 "use client";
 // import Diagram from "@/components/Diagram";
 import AgentWorkflowDiagram from "@/components/diagram/Diagram";
-import HypothesisManager from "@/components/HypothesisManager";
+import HypothesisManager from "@/components/hypothesis/HypothesisManager";
 import { Suspense } from "react";
 
 export default function MasRun() {
