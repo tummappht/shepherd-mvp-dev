@@ -6,8 +6,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useRuns } from "@/hook/useRuns";
 import { TbEdit } from "react-icons/tb";
-import TreeCheckboxList from "./TreeCheckbox";
 import HypothesisInput from "./HypothesisInput";
+import TreeCheckboxList from "../TreeCheckbox";
 
 export default function Hypothesis({ title, onMinimize, minimized }) {
   const {
