@@ -269,7 +269,7 @@ export default function Sidebar({ isStaticLayout }) {
             onClose={() => setShowDropdown(false)}
             items={DROPDOWN_ITEMS}
             onItemClick={handleDropdownClick}
-            position={isCollapsed ? "top-center" : "top-left"}
+            position={isCollapsed ? "right-center" : "top-left"}
           />
         </div>
       </aside>

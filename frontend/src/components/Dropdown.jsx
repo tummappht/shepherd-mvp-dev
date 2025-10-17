@@ -39,6 +39,8 @@ export default function Dropdown({
     "bottom-left": "top-full left-0 mt-2",
     "bottom-right": "top-full right-0 mt-2",
     "bottom-center": "top-full left-1/2 -translate-x-1/2 mt-2",
+    "left-center": "top-1/2 -translate-y-1/2 right-full mr-2",
+    "right-center": "top-1/2 -translate-y-1/2 left-full ml-2",
   };
 
   const handleItemClick = (item) => {

@@ -1,7 +1,6 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import Modal from "@/components/modal/Modal";
 import { useState } from "react";
 import FileDropZone from "@/components/FileDropZone";
 import Card, {
