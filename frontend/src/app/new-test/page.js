@@ -29,10 +29,9 @@ export default function NewTest() {
   } = useForm({
     defaultValues: {
       contactAsset: null,
-      tunnelUrl: "https://packard-newton-stripes-date.trycloudflare.com",
-      githubUrl: "https://github.com/alchemix-finance/alchemix-v2-dao",
-      projectDescription:
-        "protocol documentation to help better inform the repository.",
+      tunnelUrl: "",
+      githubUrl: "",
+      projectDescription: "",
     },
   });
 
