@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { TbArrowUp } from "react-icons/tb";
-import TreeCheckboxList from "../TreeCheckbox";
 import { useForm, Controller } from "react-hook-form";
+import TreeCheckboxList from "../treeSelect/TreeSelect";
 
 export default function HypothesisInput({
   waitingForInput = false,
@@ -36,6 +36,7 @@ export default function HypothesisInput({
     } else {
       value = data.hypothesisInput;
     }
+    console.log("🚀 ~ onSubmit ~ value:", value);
 
     const inputType = isOptions ? "option" : "input";
 
@@ -55,6 +56,7 @@ export default function HypothesisInput({
                 options={options}
                 value={field.value}
                 onChange={field.onChange}
+                showSearch
               />
             )}
           />
