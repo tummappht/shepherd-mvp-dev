@@ -37,7 +37,9 @@ export default function HypothesisInput({
       value = data.hypothesisInput;
     }
 
-    handleSend(JSON.stringify(value));
+    const inputType = isOptions ? "option" : "input";
+
+    handleSend(JSON.stringify(value), inputType);
     reset();
   };
 

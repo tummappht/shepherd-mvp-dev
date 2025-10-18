@@ -9,6 +9,7 @@ const TreeCheckbox = ({
   onToggle,
   onCheck,
   parentValue = null,
+  readOnly = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -18,7 +19,7 @@ const TreeCheckbox = ({
       setIsExpanded(newExpandedState);
     }
 
-    if (onCheck) {
+    if (!readOnly && onCheck) {
       onCheck(data.key, !data.selected);
     }
 
@@ -102,6 +103,7 @@ const TreeCheckbox = ({
               onToggle={onToggle}
               onCheck={onCheck}
               parentValue={data.key}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -115,6 +117,7 @@ export default function TreeCheckboxList({
   value,
   onChange,
   className = "",
+  readOnly = false,
 }) {
   const initializeData = (items) => {
     return items.map((item) => ({
@@ -210,6 +213,7 @@ export default function TreeCheckboxList({
           data={node}
           onToggle={handleToggle}
           onCheck={handleCheck}
+          readOnly={readOnly}
         />
       ))}
     </div>

@@ -451,6 +451,11 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
   const renderMessage = (msg) => {
     const isFromUser = msg.from === "user";
     if (isFromUser) {
+      const isOption = msg.type === "option";
+      if (isOption) {
+        return <TreeCheckboxList options={JSON.parse(msg.text)} readOnly />;
+      }
+
       return (
         <span
           className={`whitespace-pre-wrap bg-background-light text-white border border-stroke-light py-3 px-5 rounded-lg w-full`}
@@ -458,11 +463,6 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
           {msg.text}
         </span>
       );
-    }
-
-    const isOption = msg.type === "option";
-    if (isOption) {
-      return <TreeCheckboxList options={JSON.parse(msg.text)} />;
     }
 
     const isWhiteText = msg.type === "prompt" || msg.type === "end";
