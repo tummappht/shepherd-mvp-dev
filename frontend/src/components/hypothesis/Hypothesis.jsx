@@ -8,6 +8,7 @@ import { useRuns } from "@/hook/useRuns";
 import { TbEdit } from "react-icons/tb";
 import HypothesisInput from "./HypothesisInput";
 import TreeCheckboxList from "../TreeCheckbox";
+// import { mockHOHO } from "@/mocks/mockSocketRes-22.23.25-TH-Time";
 
 export default function Hypothesis({ title, onMinimize, minimized }) {
   const {
@@ -111,6 +112,10 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
     };
   }, [API_BASE, runId]);
 
+  // useEffect(() => {
+  //   mockHOHO.forEach((msg) => processRaw(msg.data));
+  // }, [mockHOHO]);
+
   const processRaw = (raw) => {
     console.log("🚀 :", raw);
     // 1) Handle tagged envelopes like <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>
@@ -155,8 +160,7 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
 
     const t = String(msg.type).toLowerCase();
     if (t === "prompt") {
-      const promptText = msg.data?.prompt || "";
-      const isHasOptions = msg.data?.options && msg.data.options.length > 0;
+      let promptText = msg.data?.prompt || "";
 
       // Check if this is asking for GitHub URL
       if (promptText.includes("Please enter a GitHub URL")) {
@@ -183,11 +187,23 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
         }
         return;
       }
-      if (isHasOptions) {
-        const options = msg.data.options;
+      if (
+        promptText.includes(
+          "Select the contracts and functions you want to test"
+        )
+      ) {
+        let promptMsg;
+        try {
+          promptMsg = JSON.parse(promptText || "{}");
+        } catch {
+          return;
+        }
+
+        promptText = promptMsg?.prompt || promptText;
+        const options = promptMsg?.options || [];
         setOptions(options);
       }
-      applyMessage(msg.data?.prompt || "", t);
+      applyMessage(promptText || "", t);
       setWaitingForInput(true);
       setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 100);
       return;
