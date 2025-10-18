@@ -7,7 +7,6 @@ import remarkGfm from "remark-gfm";
 import { useRuns } from "@/hook/useRuns";
 import { TbEdit } from "react-icons/tb";
 import HypothesisInput from "./HypothesisInput";
-import { mockHOHO } from "@/mocks/mockSocketRes-22.23.25-TH-Time";
 import TreeSelect from "../treeSelect/TreeSelect";
 
 export default function Hypothesis({ title, onMinimize, minimized }) {
@@ -296,89 +295,85 @@ export default function Hypothesis({ title, onMinimize, minimized }) {
     }
   };
 
-  useEffect(() => {
-    mockHOHO.forEach((msg) => processRaw(msg.data));
-  }, [mockHOHO]);
-
   // WebSocket setup — start the run on open, then just stream (no polling)
-  // useEffect(() => {
-  //   if (!startedRef.current) {
-  //     startedRef.current = true;
-  //     console.log("Starting run for runId:", runId);
-  //     const startRunThenSocket = async () => {
-  //       try {
-  //         let socketStatus = contextSocketStatus;
-  //         let responseStatus = null;
-  //         if (socketStatus === "started") {
-  //           const socket = getSingletonWS(socketUrl);
-  //           socketRef.current = socket;
-  //           const onMessage = (event) => {
-  //             // event.data can be string or Blob
-  //             const raw = event.data;
-  //             if (raw instanceof Blob) {
-  //               raw
-  //                 .text()
-  //                 .then(processRaw)
-  //                 .catch(() => {});
-  //             } else {
-  //               processRaw(raw);
-  //             }
-  //           };
-  //           const onError = async (e) => {
-  //             console.error("WebSocket error:", e);
-  //             const email = prompt(
-  //               "Connection failed! Something went wrong on our end. Enter your email to be notified when we've got a fix:"
-  //             );
-  //             await saveWaitlistEmail(email);
-  //             // router.push("/new-test");
-  //           };
-  //           const onClose = async (e) => {
-  //             console.log("WebSocket closed, code:", e.code);
-  //             if (e.code !== 1000 && e.code !== 1001) {
-  //               const email = prompt(
-  //                 "Connection lost unexpectedly! Enter your email to be notified when we've resolved the issue:"
-  //               );
-  //               await saveWaitlistEmail(email);
-  //               // router.push("/new-test");
-  //             }
-  //           };
-  //           socket.addEventListener("message", onMessage);
-  //           socket.addEventListener("error", onError);
-  //           socket.addEventListener("close", onClose);
-  //         } else if (
-  //           socketStatus === "at_capacity" ||
-  //           socketStatus === "at capacity" ||
-  //           socketStatus === "queued"
-  //         ) {
-  //           setRunStatus("At capacity");
-  //           const email = prompt(
-  //             "Our server is at capacity! Enter your email to be notified when it's available again:"
-  //           );
-  //           await saveWaitlistEmail(email);
-  //           // router.push("/"); // Redirect to home page
-  //           return;
-  //         } else if (responseStatus !== 202) {
-  //           setRunStatus("Error");
-  //           console.log("Unexpected status code:", responseStatus);
-  //           const email = prompt(
-  //             "Something went wrong! Enter your email to be notified when we've got a fix:"
-  //           );
-  //           await saveWaitlistEmail(email);
-  //           router.push("/new-test");
-  //           return;
-  //         } else {
-  //           setRunStatus("Error");
-  //           console.log("result status not parsed correctly");
-  //         }
-  //       } catch (error) {
-  //         // ignore; if the run already exists, WS streaming should still work
-  //         console.error("Error in startRunThenSocket:", error);
-  //         console.error("Error details:", error.message, error.stack);
-  //       }
-  //     };
-  //     startRunThenSocket();
-  //   }
-  // }, [socketUrl, repoUrl, runId]);
+  useEffect(() => {
+    if (!startedRef.current) {
+      startedRef.current = true;
+      console.log("Starting run for runId:", runId);
+      const startRunThenSocket = async () => {
+        try {
+          let socketStatus = contextSocketStatus;
+          let responseStatus = null;
+          if (socketStatus === "started") {
+            const socket = getSingletonWS(socketUrl);
+            socketRef.current = socket;
+            const onMessage = (event) => {
+              // event.data can be string or Blob
+              const raw = event.data;
+              if (raw instanceof Blob) {
+                raw
+                  .text()
+                  .then(processRaw)
+                  .catch(() => {});
+              } else {
+                processRaw(raw);
+              }
+            };
+            const onError = async (e) => {
+              console.error("WebSocket error:", e);
+              const email = prompt(
+                "Connection failed! Something went wrong on our end. Enter your email to be notified when we've got a fix:"
+              );
+              await saveWaitlistEmail(email);
+              // router.push("/new-test");
+            };
+            const onClose = async (e) => {
+              console.log("WebSocket closed, code:", e.code);
+              if (e.code !== 1000 && e.code !== 1001) {
+                const email = prompt(
+                  "Connection lost unexpectedly! Enter your email to be notified when we've resolved the issue:"
+                );
+                await saveWaitlistEmail(email);
+                // router.push("/new-test");
+              }
+            };
+            socket.addEventListener("message", onMessage);
+            socket.addEventListener("error", onError);
+            socket.addEventListener("close", onClose);
+          } else if (
+            socketStatus === "at_capacity" ||
+            socketStatus === "at capacity" ||
+            socketStatus === "queued"
+          ) {
+            setRunStatus("At capacity");
+            const email = prompt(
+              "Our server is at capacity! Enter your email to be notified when it's available again:"
+            );
+            await saveWaitlistEmail(email);
+            // router.push("/"); // Redirect to home page
+            return;
+          } else if (responseStatus !== 202) {
+            setRunStatus("Error");
+            console.log("Unexpected status code:", responseStatus);
+            const email = prompt(
+              "Something went wrong! Enter your email to be notified when we've got a fix:"
+            );
+            await saveWaitlistEmail(email);
+            router.push("/new-test");
+            return;
+          } else {
+            setRunStatus("Error");
+            console.log("result status not parsed correctly");
+          }
+        } catch (error) {
+          // ignore; if the run already exists, WS streaming should still work
+          console.error("Error in startRunThenSocket:", error);
+          console.error("Error details:", error.message, error.stack);
+        }
+      };
+      startRunThenSocket();
+    }
+  }, [socketUrl, repoUrl, runId]);
 
   // Auto-scroll to latest message
   useEffect(() => {
