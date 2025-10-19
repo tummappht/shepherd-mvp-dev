@@ -195,6 +195,10 @@ function DiagramInner() {
   );
 
   const initialNodes = useMemo(() => {
+    if (!contractsMap || contractsMap.size === 0) {
+      return [];
+    }
+
     const contracts = Array.from(contractsMap.values());
     const agentX = 100;
     const agentY = 300;
