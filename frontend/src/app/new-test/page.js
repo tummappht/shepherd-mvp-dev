@@ -248,7 +248,7 @@ export default function NewTest() {
                 Choose environment…
               </option>
               <option value="local">Local</option>
-              <option value="testnet">Testnet</option>
+              {/* <option value="testnet" disabled>Testnet</option> */}
             </select>
           </CardContent>
         </Card>

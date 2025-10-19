@@ -31,7 +31,7 @@ const MENU_ITEMS = [
     action: "reportBug",
   },
   {
-    href: "https://t.me/your_telegram_group",
+    href: "https://t.me/+_XjFZjdhTLdhZjRh",
     icon: TbBrandTelegram,
     label: "Join Telegram",
     iconColor: "text-secondary",
