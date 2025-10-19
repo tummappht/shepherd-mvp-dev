@@ -9,10 +9,9 @@ import {
   TbBrandTelegram,
   TbMessageChatbot,
   TbLogout,
-  TbUser,
-  TbSettings,
 } from "react-icons/tb";
 import { useSession, signOut } from "next-auth/react";
+import { clearAuthToken } from "@/services/utils";
 import ReportBugModal from "../ReportBugModal";
 import Dropdown from "../Dropdown";
 
@@ -70,6 +69,8 @@ export default function Sidebar({ isStaticLayout }) {
 
   const handleDropdownClick = async (action, href) => {
     if (action === "logout") {
+      // Clear the cached token before signing out
+      clearAuthToken();
       await signOut({
         callbackUrl: "/login",
         redirect: true,

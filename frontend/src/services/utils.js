@@ -10,6 +10,54 @@ export const getSocketUrl = (runId) => {
   return u.toString();
 };
 
+// Token cache with timestamp
+let tokenCache = {
+  token: null,
+  expiresAt: null,
+  fetchedAt: null,
+};
+
+const getAuthToken = async () => {
+  const now = Math.floor(Date.now() / 1000);
+
+  // Check if cached token is still valid (has >5 minutes left)
+  if (
+    tokenCache.token &&
+    tokenCache.expiresAt &&
+    tokenCache.expiresAt > now + 300
+  ) {
+    return tokenCache.token;
+  }
+
+  // Fetch new token
+  try {
+    const tokenResponse = await fetch("/api/auth/token");
+    if (tokenResponse.ok) {
+      const { token, expiresAt } = await tokenResponse.json();
+      if (token) {
+        tokenCache = {
+          token,
+          expiresAt,
+          fetchedAt: now,
+        };
+        return token;
+      }
+    } else if (tokenResponse.status === 401) {
+      // Clear cache if unauthorized
+      tokenCache = { token: null, expiresAt: null, fetchedAt: null };
+    }
+  } catch (error) {
+    console.warn("Failed to get auth token:", error);
+  }
+
+  return null;
+};
+
+// Clear token cache (useful for logout)
+export const clearAuthToken = () => {
+  tokenCache = { token: null, expiresAt: null, fetchedAt: null };
+};
+
 export const callService = async (path, options = {}) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = `${API_BASE}${normalizedPath}`;
@@ -23,9 +71,19 @@ export const callService = async (path, options = {}) => {
     };
   }
 
+  // Get JWT token (cached or fresh)
+  let authHeaders = {};
+  if (typeof window !== "undefined") {
+    const token = await getAuthToken();
+    if (token) {
+      authHeaders.Authorization = `Bearer ${token}`;
+    }
+  }
+
   const config = {
     headers: {
       ...options.headers,
+      ...authHeaders,
     },
     ...options,
   };
