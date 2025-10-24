@@ -65,11 +65,15 @@ const getSingletonWebSocket = (url) => {
   pool.set(url, ws);
 
   // Clean up when the connection closes
-  ws.addEventListener("close", () => {
+  const cleanup = () => {
     if (pool.get(url) === ws) {
       pool.delete(url);
+      console.log("WebSocket removed from pool:", url);
     }
-  });
+  };
+
+  ws.addEventListener("close", cleanup);
+  ws.addEventListener("error", cleanup);
 
   return ws;
 };

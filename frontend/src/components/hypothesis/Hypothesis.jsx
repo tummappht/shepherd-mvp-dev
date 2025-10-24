@@ -87,6 +87,14 @@ export default function Hypothesis({
       try {
         await handleCancelRun(delayMs);
         setWaitingForInput(false);
+        if (socketRef.current) {
+          socketRef.current.close(
+            WEBSOCKET_CLOSE_CODES.NORMAL,
+            "Run cancelled"
+          );
+          socketRef.current = null;
+          console.log("Closing WebSocket connection ");
+        }
       } catch (error) {
         console.error("Failed to cancel run:", error);
       }
@@ -165,7 +173,6 @@ export default function Hypothesis({
   // WebSocket setup and management
   useEffect(() => {
     if (!socketUrl) return;
-    console.log("🚀 ~ Hypothesis ~ socketUrl:", socketUrl);
 
     if (!startedRef.current) {
       startedRef.current = true;
@@ -309,7 +316,7 @@ export default function Hypothesis({
           addUserMessage(value, type);
           sendSocketMessage(value);
           addMessage("Session has ended successfully.", MESSAGE_TYPES.END);
-          cancelRun(505);
+          cancelRun();
           setWaitingForInput(false);
           return;
         }

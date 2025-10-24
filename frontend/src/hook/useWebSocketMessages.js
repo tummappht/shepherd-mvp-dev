@@ -325,7 +325,7 @@ export const useWebSocketMessages = ({
 
   const processMessage = useCallback(
     (raw) => {
-      // console.log("Processing message:", raw);
+      console.log("Processing message:", raw);
 
       // Handle tagged envelopes (e.g., <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>)
       if (typeof raw === "string" && handleTaggedEnvelope(raw)) {
