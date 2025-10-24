@@ -119,7 +119,6 @@ export default function Hypothesis({
     setOptions,
     cancelRun,
     focusInput,
-    sendSocketMessage,
     isReadOnly,
   });
 

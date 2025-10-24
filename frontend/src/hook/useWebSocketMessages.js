@@ -56,7 +56,6 @@ export const useWebSocketMessages = ({
   setOptions,
   cancelRun,
   focusInput,
-  sendSocketMessage,
   isReadOnly = false,
 }) => {
   // ============================================================================
@@ -88,14 +87,7 @@ export const useWebSocketMessages = ({
       setWaitingForInput(true);
       focusInput();
     },
-    [
-      sendSocketMessage,
-      addMessage,
-      focusInput,
-      setWaitingForInput,
-      setOptions,
-      isReadOnly,
-    ]
+    [addMessage, focusInput, setWaitingForInput, setOptions, isReadOnly]
   );
 
   const handleUserInputMessage = useCallback(
