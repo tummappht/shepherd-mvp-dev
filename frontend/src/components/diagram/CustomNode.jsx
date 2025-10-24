@@ -136,11 +136,6 @@ export default function CustomNode({ data, onOpenDetail }) {
                           <div className="text-[10px] opacity-70">
                             {new Date(exec.call_timestamp).toLocaleTimeString()}
                           </div>
-                          {exec.status === "failed" && exec.reason && (
-                            <div className="mt-1 text-[10px] opacity-80 truncate">
-                              {exec.reason}
-                            </div>
-                          )}
                         </div>
                         <button
                           onClick={(e) => {

@@ -1,44 +1,44 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import ListItem from "./ListItem";
 import { TbFolderCode } from "react-icons/tb";
+import PropTypes from "prop-types";
+import { formatTimestamp } from "@/lib/formatDate";
 
-// const sessions = [
-//   { name: "Fusaka Upgrade" },
-//   { name: "Brevis Pico ZKVM" },
-//   { name: "LayerZero Endpoint V2 - Sui" },
-//   { name: "Succinct" },
-//   { name: "Makina Foundation" },
-//   { name: "Monad" },
-//   { name: "ZetaChain" },
-//   { name: "Aptos Core" },
-//   { name: "Sui" },
-//   { name: "Sei Network" },
-//   { name: "Celestia" },
-//   { name: "Fuel Labs" },
-//   { name: "StarkNet" },
-// ];
-
-const sessions = [];
-
-export default function Repositories() {
-  const router = useRouter();
-
+export default function Repositories({ sessions = [], userId }) {
   const defaultIcon = () => (
     <TbFolderCode className="text-2xl text-secondary" />
   );
 
-  const onItemClick = () => {
-    router.push("/new-test");
-  };
+  const formattedSessions = sessions.map((session) => ({
+    ...session,
+    formattedTime: session.timestamp
+      ? formatTimestamp(session.timestamp, "relative")
+      : "",
+    href: session.run_id ? `/mas-run?run_id=${session.run_id}` : "/new-test",
+  }));
 
   return (
     <ListItem
-      items={sessions}
+      items={formattedSessions}
       defaultIcon={defaultIcon}
-      onItemClick={onItemClick}
       emptyText="Create Session"
+      emptyHref="/new-test"
+      getItemLabel={(item) => {
+        if (item?.session_name && item.session_name.length > 0) {
+          return item.session_name;
+        }
+
+        const url = item.github_url || "";
+        const repoName = url.split("/").pop() || item.run_id || "Session";
+        return repoName;
+      }}
+      getItemKey={(item) => item.run_id}
     />
   );
 }
+
+Repositories.propTypes = {
+  sessions: PropTypes.array,
+  userId: PropTypes.string,
+};
