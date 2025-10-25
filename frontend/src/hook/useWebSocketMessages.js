@@ -16,13 +16,13 @@ export const MESSAGE_TYPES = {
   COMPLETE: "complete",
   STDERR: "stderr",
   ERROR: "error",
-  OPTION: "option",
   END: "end",
 };
 
-export const USER_INPUT_TYPES = {
+export const CONTENT_TYPES = {
   INPUT: "input",
   OPTION: "option",
+  TABLE: "table",
 };
 
 // Message patterns
@@ -116,12 +116,12 @@ export const useWebSocketMessages = ({
 
       if (!value.includes("key") || !value.includes("childs")) {
         //Input case
-        addUserMessage(msg.data?.value || "", USER_INPUT_TYPES.INPUT);
+        addUserMessage(msg.data?.value || "", CONTENT_TYPES.INPUT);
         return;
       } else {
         // Options case
         try {
-          addUserMessage(value, USER_INPUT_TYPES.OPTION);
+          addUserMessage(value, CONTENT_TYPES.OPTION);
         } catch {
           return;
         }
@@ -189,6 +189,11 @@ export const useWebSocketMessages = ({
     (msg) => {
       const agentType = msg.data?.agent_type || "Unknown";
       const content = msg.data?.content || msg.data || "";
+      if (content.type === CONTENT_TYPES.TABLE) {
+        addMessage(content, CONTENT_TYPES.TABLE);
+        return;
+      }
+
       addMessage(`${agentType} agent:\n${content}`, MESSAGE_TYPES.AGENT);
     },
     [addMessage]
@@ -219,7 +224,8 @@ export const useWebSocketMessages = ({
   const handleCompleteMessage = useCallback(() => {
     console.log("Run complete");
     cancelRun();
-  }, [cancelRun]);
+    setRunStatus(RUN_STATUS.ENDED);
+  }, [cancelRun, setRunStatus]);
 
   const handleStderrMessage = useCallback(
     (msg) => {

@@ -78,10 +78,6 @@ const getSingletonWebSocket = (url) => {
   return ws;
 };
 
-const isRenderAsMarkdown = (text) => {
-  return Boolean(text?.includes("|"));
-};
-
 export const useRuns = (queryParamRunId = null) => {
   const { data: session } = useSession();
 
@@ -229,7 +225,6 @@ export const useRuns = (queryParamRunId = null) => {
     runId,
     socketUrl,
     socketStatus,
-    isRenderAsMarkdown,
     handleStartRun,
     handleCancelRun,
     handleSaveWaitlistEmail,
