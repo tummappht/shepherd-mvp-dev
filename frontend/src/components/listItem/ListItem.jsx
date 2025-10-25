@@ -2,7 +2,9 @@
 
 import PropTypes from "prop-types";
 import { TbDots, TbSquarePlus } from "react-icons/tb";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 export default function ListItem({
   items,
@@ -13,7 +15,31 @@ export default function ListItem({
   emptyHref,
   getItemLabel,
   getItemKey,
+  onLoadMore,
+  hasMore,
+  isLoadingMore,
 }) {
+  const observerTarget = useRef(null);
+
+  useEffect(() => {
+    if (!onLoadMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore) {
+          onLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [onLoadMore, hasMore, isLoadingMore]);
+
   const getColumnClass = () => {
     if (columns === 2) {
       return "grid grid-cols-2 gap-x-3 gap-y-3";
@@ -96,6 +122,13 @@ export default function ListItem({
   return (
     <div className={`overflow-y-auto ${getColumnClass()}`}>
       {renderListItem(items)}
+      {hasMore && (
+        <div ref={observerTarget} className="py-4 flex justify-center">
+          {isLoadingMore && (
+            <AiOutlineLoading3Quarters className="animate-spin text-secondary text-xl" />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -109,4 +142,7 @@ ListItem.propTypes = {
   emptyHref: PropTypes.string,
   getItemLabel: PropTypes.func,
   getItemKey: PropTypes.func,
+  onLoadMore: PropTypes.func,
+  hasMore: PropTypes.bool,
+  isLoadingMore: PropTypes.bool,
 };

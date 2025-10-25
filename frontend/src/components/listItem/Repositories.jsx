@@ -5,7 +5,12 @@ import { TbFolderCode } from "react-icons/tb";
 import PropTypes from "prop-types";
 import { formatTimestamp } from "@/lib/formatDate";
 
-export default function Repositories({ sessions = [], userId }) {
+export default function Repositories({
+  sessions = [],
+  onLoadMore,
+  hasMore,
+  isLoadingMore,
+}) {
   const defaultIcon = () => (
     <TbFolderCode className="text-2xl text-secondary" />
   );
@@ -34,11 +39,16 @@ export default function Repositories({ sessions = [], userId }) {
         return repoName;
       }}
       getItemKey={(item) => item.run_id}
+      onLoadMore={onLoadMore}
+      hasMore={hasMore}
+      isLoadingMore={isLoadingMore}
     />
   );
 }
 
 Repositories.propTypes = {
   sessions: PropTypes.array,
-  userId: PropTypes.string,
+  onLoadMore: PropTypes.func,
+  hasMore: PropTypes.bool,
+  isLoadingMore: PropTypes.bool,
 };

@@ -3,16 +3,31 @@ import Repositories from "@/components/listItem/Repositories";
 import References from "@/components/listItem/References";
 import CollectionPanel from "@/components/CollectionPanel";
 import WelcomeModal from "@/components/WelcomeModal";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { serviceUserSessions } from "@/services/user";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
 //TODO: Porto: Revised for the payment
 export default function Dashboard() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["userSessions", { limit: 10 }],
-    queryFn: () => serviceUserSessions({ limit: 10 }),
+  const {
+    data,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["userSessions"],
+    queryFn: ({ pageParam = 0 }) =>
+      serviceUserSessions({ limit: 10, offset: pageParam }),
+    getNextPageParam: (lastPage, allPages) => {
+      const currentOffset = allPages.length * 10;
+      return lastPage?.sessions?.length === 10 ? currentOffset : undefined;
+    },
+    initialPageParam: 0,
   });
+
+  const sessions = data?.pages.flatMap((page) => page.sessions) || [];
 
   return (
     <>
@@ -35,8 +50,10 @@ export default function Dashboard() {
             href="/new-test"
           >
             <Repositories
-              sessions={data?.sessions || []}
-              userId={data?.user_id || ""}
+              sessions={sessions}
+              onLoadMore={fetchNextPage}
+              hasMore={hasNextPage}
+              isLoadingMore={isFetchingNextPage}
             />
           </CollectionPanel>
         </div>
