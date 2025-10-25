@@ -11,7 +11,19 @@ export default function MessageRenderer({ msg }) {
     const isOption = msg.type === CONTENT_TYPES.OPTION;
 
     if (isOption) {
-      return <TreeSelect options={JSON.parse(msg.text)} readOnly />;
+      try {
+        // Remove trailing comma and parse JSON
+        const cleanedText = msg.text.replace(/,\s*$/, "");
+        const parsedOptions = JSON.parse(cleanedText);
+        return <TreeSelect options={parsedOptions} readOnly />;
+      } catch (error) {
+        console.error("Failed to parse options:", error, msg.text);
+        return (
+          <span className="whitespace-pre-wrap bg-background-light text-white border border-stroke-light py-3 px-5 rounded-lg w-full">
+            {msg.text}
+          </span>
+        );
+      }
     }
 
     return (
