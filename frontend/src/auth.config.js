@@ -3,10 +3,7 @@ import GitHub from "next-auth/providers/github";
 
 export const authConfig = {
   providers: [
-    Google({
-      clientId: process.env.DESMOND_AUTH_GOOGLE_CLIENT_ID,
-      clientSecret: process.env.DESMOND_AUTH_GOOGLE_CLIENT_SECRET,
-    }),
+    Google,
     GitHub({
       clientId: process.env.DESMOND_AUTH_GITHUB_CLIENT_ID,
       clientSecret: process.env.DESMOND_AUTH_GITHUB_CLIENT_SECRET,
