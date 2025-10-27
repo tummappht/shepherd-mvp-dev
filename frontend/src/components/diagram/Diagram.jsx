@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import ReactFlow, {
   Controls,
   Background,
@@ -108,8 +109,8 @@ function processMessages(messages) {
   return { contractsMap, edgesData };
 }
 
-function DiagramInner() {
-  const { socketUrl, getSingletonWS } = useRuns();
+function DiagramInner({ runIdFromQuery }) {
+  const { socketUrl, getSingletonWS } = useRuns(runIdFromQuery);
   const { fitView } = useReactFlow();
   const [selectedExecution, setSelectedExecution] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
@@ -338,12 +339,20 @@ function DiagramInner() {
   );
 }
 
-export default function AgentWorkflowDiagram() {
+export default function AgentWorkflowDiagram({ runIdFromQuery }) {
   return (
     <div style={{ width: "100%", height: "100%", background: "#0f0f23" }}>
       <ReactFlowProvider>
-        <DiagramInner />
+        <DiagramInner runIdFromQuery={runIdFromQuery} />
       </ReactFlowProvider>
     </div>
   );
 }
+
+AgentWorkflowDiagram.propTypes = {
+  runIdFromQuery: PropTypes.string,
+};
+
+DiagramInner.propTypes = {
+  runIdFromQuery: PropTypes.string,
+};

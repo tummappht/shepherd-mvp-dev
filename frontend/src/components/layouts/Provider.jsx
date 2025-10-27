@@ -2,15 +2,21 @@
 import { SessionProvider } from "next-auth/react";
 import { SocketStatusProvider } from "@/context/SocketStatusContext";
 import SessionMonitor from "@/components/auth/SessionMonitor";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 
 export default function Providers({ children }) {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
     <SessionProvider
-      refetchInterval={5 * 60} // Refetch session every 5 minutes
+      refetchInterval={30 * 60} // Refetch session every 30 minutes
       refetchOnWindowFocus={true}
     >
-      <SessionMonitor />
-      <SocketStatusProvider>{children}</SocketStatusProvider>
+      <QueryClientProvider client={queryClient}>
+        <SessionMonitor />
+        <SocketStatusProvider>{children}</SocketStatusProvider>
+      </QueryClientProvider>
     </SessionProvider>
   );
 }

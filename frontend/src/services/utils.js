@@ -47,7 +47,7 @@ const getAuthToken = async () => {
       tokenCache = { token: null, expiresAt: null, fetchedAt: null };
     }
   } catch (error) {
-    console.warn("Failed to get auth token:", error);
+    console.error("Failed to get auth token:", error);
   }
 
   return null;
@@ -71,22 +71,20 @@ export const callService = async (path, options = {}) => {
     };
   }
 
-  // Get JWT token (cached or fresh)
-  let authHeaders = {};
-  if (typeof window !== "undefined") {
-    const token = await getAuthToken();
-    if (token) {
-      authHeaders.Authorization = `Bearer ${token}`;
-    }
-  }
-
   const config = {
     headers: {
       ...options.headers,
-      ...authHeaders,
     },
     ...options,
   };
+
+  // Get JWT token (cached or fresh)
+  if (typeof window !== "undefined") {
+    const token = await getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
 
   try {
     const response = await fetch(url, config);
@@ -107,18 +105,27 @@ export const callService = async (path, options = {}) => {
       throw error;
     }
 
-    return {
-      success: true,
-      status: response.status,
-      data,
-    };
+    return data;
+    // return {
+    //   success: true,
+    //   status: response.status,
+    //   data,
+    // };
   } catch (error) {
     throw error;
   }
 };
 
-export const get = (path, options = {}) =>
-  callService(path, { ...options, method: "GET" });
+export const get = (path, options = {}) => {
+  let url = path;
+  if (options.params && typeof options.params === "object") {
+    const searchParams = new URLSearchParams(options.params).toString();
+    url += (url.includes("?") ? "&" : "?") + searchParams;
+    const { params, ...rest } = options;
+    options = rest;
+  }
+  return callService(url, { ...options, method: "GET" });
+};
 
 export const post = (path, body, options = {}) =>
   callService(path, {
