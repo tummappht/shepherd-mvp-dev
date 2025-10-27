@@ -19,7 +19,7 @@ const FileDropZone = forwardRef(
       maxFiles = 5,
       multiple = false,
       className = "",
-      size = "normal", // small, normal
+      size = "small", // small, normal
     },
     ref
   ) => {
@@ -221,8 +221,9 @@ const FileDropZone = forwardRef(
 
             {size === "small" ? (
               <p className="text-md font-semibold text-white mb-1">
-                {dragActive ? "Drop files here" : "Drag & drop files here"} or
-                click to browse
+                {dragActive
+                  ? "Drop files here"
+                  : "Drag & drop files here or click to browse"}
               </p>
             ) : (
               <>

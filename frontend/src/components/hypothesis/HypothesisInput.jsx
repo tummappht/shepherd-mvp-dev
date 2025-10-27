@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { TbArrowUp } from "react-icons/tb";
 import { useForm, Controller } from "react-hook-form";
 import TreeCheckboxList from "../treeSelect/TreeSelect";
+import { CONTENT_TYPES } from "@/hook/useWebSocketMessages";
 
 export default function HypothesisInput({
   waitingForInput = false,
@@ -36,9 +37,8 @@ export default function HypothesisInput({
     } else {
       value = data.hypothesisInput;
     }
-    console.log("🚀 ~ onSubmit ~ value:", value);
 
-    const inputType = isOptions ? "option" : "input";
+    const inputType = isOptions ? CONTENT_TYPES.OPTION : CONTENT_TYPES.INPUT;
 
     handleSend(JSON.stringify(value), inputType);
     reset();
