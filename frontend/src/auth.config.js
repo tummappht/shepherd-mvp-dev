@@ -2,7 +2,16 @@ import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 
 export const authConfig = {
-  providers: [Google, GitHub],
+  providers: [
+    Google({
+      clientId: process.env.DESMOND_AUTH_GOOGLE_CLIENT_ID,
+      clientSecret: process.env.DESMOND_AUTH_GOOGLE_CLIENT_SECRET,
+    }),
+    GitHub({
+      clientId: process.env.DESMOND_AUTH_GITHUB_CLIENT_ID,
+      clientSecret: process.env.DESMOND_AUTH_GITHUB_CLIENT_SECRET,
+    }),
+  ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
