@@ -45,11 +45,18 @@ export default function NewTest() {
   const onSubmit = async (data) => {
     setIsLoading(true);
     try {
+      let sessionName = data.sessionName;
+      if (!sessionName && data.githubUrl) {
+        const urlParts = data.githubUrl.split("/");
+        sessionName = urlParts[urlParts.length - 1] || data.githubUrl;
+      }
+
       const formData = new FormData();
       formData.append("tunnel_url", data.tunnelUrl);
       formData.append("github_url", data.githubUrl);
       formData.append("project_description", data.projectDescription);
       formData.append("environment", data.environment);
+      formData.append("session_name", sessionName);
       if (data.contactAsset?.[0]) {
         formData.append("assets", data.contactAsset[0]);
       }
@@ -64,10 +71,9 @@ export default function NewTest() {
 
       const res = await handleStartRun(formData);
       const status = res?.status || "Error";
-      const repoUrl = res?.job_data?.github_url || "";
 
       setSocketStatus(status);
-      router.push(`/mas-run?repoUrl=${encodeURIComponent(repoUrl)}`);
+      router.push("/mas-run");
     } catch (error) {
       console.error("Error during form submission:", error);
       alert("An error occurred while submitting the form. Please try again.");
@@ -81,10 +87,7 @@ export default function NewTest() {
         onSubmit={handleSubmit(onSubmit)}
         className="container mx-auto flex flex-col gap-4"
       >
-        <Card
-          title="Upload Repository"
-          description="Please upload your repository as a .zip file for analysis."
-        >
+        <Card>
           <CardTitle className="mb-0">Upload Repository</CardTitle>
           <CardDescription>
             Please upload your repository as a .zip file for analysis.
@@ -144,6 +147,27 @@ export default function NewTest() {
           </CardContent>
         </Card>
         <Card>
+          <CardTitle className="mb-0">Session Name</CardTitle>
+          <CardDescription>
+            Please provide a name for your session. If left empty, the
+            repository name will be used.
+          </CardDescription>
+          <CardContent>
+            <input
+              type="text"
+              placeholder="Session Name"
+              className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
+              {...register("sessionName")}
+              aria-invalid={errors.sessionName ? "true" : "false"}
+            />
+            {errors.sessionName && (
+              <span className="text-red-500 text-xs">
+                This field is required
+              </span>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
           <CardTitle className="mb-0">Project description</CardTitle>
           <CardDescription>
             Please provide the protocol documentation to help better inform the
@@ -151,11 +175,11 @@ export default function NewTest() {
           </CardDescription>
           <CardContent className="flex flex-col gap-4">
             <div>
-              <p className="mb-2">Description</p>
+              <p className="mb-2">Description (Optical)</p>
               <textarea
                 className="w-full py-2 px-3 h-36 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
                 placeholder="Insert documentation..."
-                {...register("projectDescription", { required: true })}
+                {...register("projectDescription")}
                 aria-invalid={errors.projectDescription ? "true" : "false"}
               />
               {errors.projectDescription && (
@@ -220,8 +244,8 @@ export default function NewTest() {
               ) : (
                 <button
                   type="button"
-                  className="w-full flex flex-row items-center justify-center px-4 py-1 gap-2 rounded-lg bg-gray-border"
-                  onClick={() => setIsShowRef(true)}
+                  className="w-full flex flex-row items-center justify-center px-4 py-1 gap-2 rounded-lg bg-gray-border cursor-not-allowed"
+                  // onClick={() => setIsShowRef(true)}
                 >
                   <p className="text-lg text-helper">+</p>
                   <p className="text-sm font-semibold text-helper">

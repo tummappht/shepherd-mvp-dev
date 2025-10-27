@@ -2,8 +2,9 @@
 import { useState } from "react";
 import Hypothesis from "./Hypothesis";
 import { FaPlus } from "react-icons/fa";
+import PropTypes from "prop-types";
 
-export default function HypothesisManager() {
+export default function HypothesisManager({ runIdFromQuery }) {
   const [hypotheses, setHypotheses] = useState([{ id: 1, minimized: false }]);
 
   const addHypothesis = () => {
@@ -30,6 +31,7 @@ export default function HypothesisManager() {
           title={`Hypothesis #${h.id}`}
           minimized={h.minimized}
           onMinimize={toggleMinimize}
+          queryParamRunId={runIdFromQuery}
         />
       ))}
 
@@ -45,3 +47,7 @@ export default function HypothesisManager() {
     </div>
   );
 }
+
+HypothesisManager.propTypes = {
+  runIdFromQuery: PropTypes.string,
+};

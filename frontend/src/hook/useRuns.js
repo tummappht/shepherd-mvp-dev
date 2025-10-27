@@ -1,11 +1,23 @@
 import { useSocketStatus } from "@/context/SocketStatusContext";
-import { serviceStartRun } from "@/services/runs";
+import {
+  serviceStartRun,
+  serviceCancelRun,
+  serviceSaveWaitlistEmail,
+  getWebSocketUrl,
+} from "@/services/runs";
 import { API_BASE } from "@/services/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { serviceUserSessionByRunId } from "@/services/user";
+import { useSession } from "next-auth/react";
 
 // Constants
 const RUN_ID_STORAGE_KEY = "masRunId";
-const RUN_ID_EVENT_NAME = "mas:runId";
+
+export const WEBSOCKET_CLOSE_CODES = {
+  NORMAL: 1000,
+  GOING_AWAY: 1001,
+};
 
 const generateRunId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -14,16 +26,6 @@ const generateRunId = () => {
   return `run-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 10)}`;
-};
-
-const dispatchCustomEvent = (eventName, detail) => {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.dispatchEvent(new CustomEvent(eventName, { detail }));
-  } catch (error) {
-    console.error(`Failed to dispatch custom event ${eventName}:`, error);
-  }
 };
 
 const getOrCreateRunId = () => {
@@ -63,45 +65,55 @@ const getSingletonWebSocket = (url) => {
   pool.set(url, ws);
 
   // Clean up when the connection closes
-  ws.addEventListener("close", () => {
+  const cleanup = () => {
     if (pool.get(url) === ws) {
       pool.delete(url);
+      console.log("WebSocket removed from pool:", url);
     }
-  });
+  };
+
+  ws.addEventListener("close", cleanup);
+  ws.addEventListener("error", cleanup);
 
   return ws;
 };
 
-const isRenderAsMarkdown = (text) => {
-  return Boolean(text?.includes("|"));
-};
+export const useRuns = (queryParamRunId = null) => {
+  const { data: session } = useSession();
 
-export const useRuns = () => {
   const { setSocketStatus, socketStatus } = useSocketStatus();
-  const [runId, setRunId] = useState(getOrCreateRunId);
-  const runIdRef = useRef(runId);
+  const [runId, setRunId] = useState(
+    () => queryParamRunId || getOrCreateRunId()
+  );
+  const hasInitializedWithExistingId = useRef(false);
 
+  // Update runId if queryParamRunId changes (only once on mount or when it changes)
   useEffect(() => {
-    runIdRef.current = runId;
-  }, [runId]);
-
-  useEffect(() => {
-    dispatchCustomEvent(RUN_ID_EVENT_NAME, runId);
-  }, [runId]);
+    if (queryParamRunId && !hasInitializedWithExistingId.current) {
+      hasInitializedWithExistingId.current = true;
+      setRunId(queryParamRunId);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem(RUN_ID_STORAGE_KEY, queryParamRunId);
+        } catch (error) {
+          console.error("Failed to update sessionStorage:", error);
+        }
+      }
+    }
+  }, [queryParamRunId]);
 
   const socketUrl = useMemo(() => {
-    if (!runId) return null;
-
-    try {
-      const url = new URL(API_BASE);
-      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-      url.pathname = url.pathname.replace(/\/$/, "") + `/ws/${runId}`;
-      return url.toString();
-    } catch (error) {
-      console.error("Failed to create WebSocket URL:", error);
-      return null;
+    if (queryParamRunId) {
+      if (session) {
+        const userId = session?.user?.id || "";
+        return getWebSocketUrl(`${userId}_${queryParamRunId}`);
+      }
+    } else {
+      return getWebSocketUrl(runId);
     }
-  }, [runId]);
+
+    return null;
+  }, [queryParamRunId, runId, session]);
 
   const resetRunId = useCallback(() => {
     const newRunId = generateRunId();
@@ -115,12 +127,11 @@ export const useRuns = () => {
     }
 
     setRunId(newRunId);
-    dispatchCustomEvent(RUN_ID_EVENT_NAME, newRunId);
   }, []);
 
-  // Start a new run with the provided form data
-  const handleStartRun = useCallback(async (formData) => {
-    try {
+  // React Query mutation for starting a run
+  const startRunMutation = useMutation({
+    mutationFn: async (formData) => {
       // Generate a fresh runId for every run
       const newRunId = generateRunId();
 
@@ -134,31 +145,97 @@ export const useRuns = () => {
       }
 
       setRunId(newRunId);
-      dispatchCustomEvent(RUN_ID_EVENT_NAME, newRunId);
 
       // Call the API to start the run
-      const response = await serviceStartRun(newRunId, formData);
-
-      if (!response.success) {
-        throw new Error(`API error: ${response.status || "Unknown error"}`);
-      }
-
-      return response.data;
-    } catch (error) {
+      return await serviceStartRun(newRunId, formData);
+    },
+    onError: (error) => {
       console.error("Failed to start run:", error);
-      throw error;
-    }
-  }, []);
+    },
+  });
+
+  // React Query mutation for canceling a run
+  const cancelRunMutation = useMutation({
+    mutationFn: async (delayMs = 0) => {
+      return await serviceCancelRun(runId, delayMs);
+    },
+    onError: (error) => {
+      console.error("Failed to cancel run:", error);
+    },
+  });
+
+  // React Query mutation for saving waitlist email
+  const saveWaitlistEmailMutation = useMutation({
+    mutationFn: async (email) => {
+      return await serviceSaveWaitlistEmail(email);
+    },
+    retry: false,
+    onError: (error) => {
+      console.error("Failed to save email:", error);
+      alert("Failed to save your email. Please try again later.");
+    },
+  });
+
+  // React Query mutation for getting user sessions
+  const getUserSessionsMutation = useMutation({
+    mutationFn: async (runId) => {
+      return await serviceUserSessionByRunId(runId);
+    },
+    retry: false,
+    onError: (error) => {
+      console.error("Failed to get user sessions:", error);
+      alert("Failed to get user sessions. Please try again later.");
+    },
+  });
+
+  // Start a new run with the provided form data
+  const handleStartRun = useCallback(
+    async (formData) => {
+      return startRunMutation.mutateAsync(formData);
+    },
+    [startRunMutation]
+  );
+
+  // Cancel the current run
+  const handleCancelRun = useCallback(
+    async (delayMs = 0) => {
+      return cancelRunMutation.mutateAsync(delayMs);
+    },
+    [cancelRunMutation]
+  );
+
+  // Save waitlist email
+  const handleSaveWaitlistEmail = useCallback(
+    async (email) => {
+      return saveWaitlistEmailMutation.mutateAsync(email);
+    },
+    [saveWaitlistEmailMutation]
+  );
+
+  // Get User Sessions
+  const handleGetUserSessions = useCallback(
+    async (runId) => {
+      return getUserSessionsMutation.mutateAsync(runId);
+    },
+    [getUserSessionsMutation]
+  );
 
   return {
     API_BASE,
     runId,
     socketUrl,
     socketStatus,
-    isRenderAsMarkdown,
     handleStartRun,
+    handleCancelRun,
+    handleSaveWaitlistEmail,
+    handleGetUserSessions,
     resetRunId,
     getSingletonWS: getSingletonWebSocket,
     setSocketStatus,
+    // Expose mutation states for UI feedback
+    isStartingRun: startRunMutation.isPending,
+    isCancelingRun: cancelRunMutation.isPending,
+    isSavingEmail: saveWaitlistEmailMutation.isPending,
+    isGettingUserSessions: getUserSessionsMutation.isPending,
   };
 };
