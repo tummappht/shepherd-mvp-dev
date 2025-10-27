@@ -18,6 +18,7 @@ export default function ListItem({
   onLoadMore,
   hasMore,
   isLoadingMore,
+  onDotsClick,
 }) {
   const observerTarget = useRef(null);
 
@@ -113,7 +114,20 @@ export default function ListItem({
               )}
             </div>
           </div>
-          <TbDots className="text-lg text-secondary" />
+          {onDotsClick && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDotsClick(item);
+              }}
+              className="text-lg text-secondary hover:text-white transition-colors p-2 hover:bg-background rounded"
+            >
+              <TbDots />
+            </button>
+          )}
+          {!onDotsClick && <TbDots className="text-lg text-secondary" />}
         </Wrapper>
       );
     });
@@ -145,4 +159,5 @@ ListItem.propTypes = {
   onLoadMore: PropTypes.func,
   hasMore: PropTypes.bool,
   isLoadingMore: PropTypes.bool,
+  onDotsClick: PropTypes.func,
 };
