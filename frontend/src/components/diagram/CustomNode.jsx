@@ -106,7 +106,7 @@ export default function CustomNode({ data, onOpenDetail }) {
               </button>
             </div>
 
-            <div className="max-h-[300px] overflow-y-auto bg-[rgba(0,0,0,0.5)] rounded-lg p-2 space-y-2">
+            <div className="max-h-[300px] overflow-y-auto bg-[rgba(0,0,0,0.5)] rounded-lg p-2 space-y-2 nowheel">
               {filteredExecutions.length === 0 ? (
                 <div className="text-xs text-white/50 text-center py-2">
                   No {filter !== "all" ? filter : ""} executions
