@@ -5,8 +5,8 @@ export const authConfig = {
   providers: [
     Google,
     GitHub({
-      clientId: process.env.DESMOND_AUTH_GITHUB_CLIENT_ID,
-      clientSecret: process.env.DESMOND_AUTH_GITHUB_CLIENT_SECRET,
+      clientId: process.env.HUW_AUTH_GITHUB_CLIENT_ID,
+      clientSecret: process.env.HUW_AUTH_GITHUB_CLIENT_SECRET,
     }),
   ],
   callbacks: {
