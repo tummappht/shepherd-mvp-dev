@@ -7,7 +7,12 @@ import PropTypes from "prop-types";
 import Modal from "../modal/Modal";
 import { useEffect } from "react";
 
-export default function EditSessionNameModal({ isOpen, onClose, session }) {
+export default function EditSessionNameModal({
+  isOpen,
+  onClose,
+  session,
+  setSessionName,
+}) {
   const queryClient = useQueryClient();
 
   const {
@@ -33,8 +38,11 @@ export default function EditSessionNameModal({ isOpen, onClose, session }) {
   const updateSessionNameMutation = useMutation({
     mutationFn: ({ runId, session_name }) =>
       serviceUpdateUserSessionName(runId, session_name),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["userSessions"] });
+      if (setSessionName && variables?.session_name) {
+        setSessionName(variables.session_name);
+      }
       onClose();
       reset();
     },
@@ -74,7 +82,7 @@ export default function EditSessionNameModal({ isOpen, onClose, session }) {
         <div className="space-y-4">
           <div>
             <label
-              htmlFor="sessionName"
+              htmlFor="session_name"
               className="block text-sm font-medium text-foreground mb-2"
             >
               Session Name <span className="text-red-500">*</span>
@@ -96,11 +104,11 @@ export default function EditSessionNameModal({ isOpen, onClose, session }) {
               className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
               placeholder="Enter session name"
               disabled={updateSessionNameMutation.isPending}
-              aria-invalid={errors.sessionName ? "true" : "false"}
+              aria-invalid={errors.session_name ? "true" : "false"}
             />
-            {errors.sessionName && (
+            {errors.session_name && (
               <span className="text-red-500 text-xs mt-1">
-                {errors.sessionName.message}
+                {errors.session_name.message}
               </span>
             )}
           </div>
@@ -149,4 +157,5 @@ EditSessionNameModal.propTypes = {
     session_name: PropTypes.string,
     github_url: PropTypes.string,
   }),
+  setSessionName: PropTypes.func,
 };

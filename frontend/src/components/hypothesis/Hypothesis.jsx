@@ -17,18 +17,16 @@ import MessagePrefix from "./MessagePrefix";
 import LoadingIndicator from "./LoadingIndicator";
 import { useWebSocketConnection } from "@/hook/useWebSocketConnection";
 import { useRunCleanup } from "@/hook/useRunCleanup";
+import EditSessionNameModal from "@/components/modals/EditSessionNameModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Constants
 const AUTO_FOCUS_DELAY = 100;
 const CANCEL_RUN_DEFAULT_DELAY = 5000;
 
-export default function Hypothesis({
-  title,
-  onMinimize,
-  minimized,
-  queryParamRunId,
-}) {
+export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Hooks
   const {
@@ -43,10 +41,15 @@ export default function Hypothesis({
   } = useRuns(queryParamRunId);
 
   // State
+  const [sessionName, setSessionName] = useState(
+    queryParamSessionName || "Loading..."
+  );
   const [messages, setMessages] = useState([]);
   const [waitingForInput, setWaitingForInput] = useState(false);
   const [runStatus, setRunStatus] = useState(RUN_STATUS.INITIALIZING);
   const [options, setOptions] = useState([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentSession, setCurrentSession] = useState(null);
 
   // Refs
   const messagesEndRef = useRef(null);
@@ -135,6 +138,7 @@ export default function Hypothesis({
     handleGetUserSessions,
     processMessage,
     saveWaitlistEmail,
+    setSessionName,
     setRunStatus,
     router,
     API_BASE,
@@ -227,15 +231,65 @@ export default function Hypothesis({
     [runStatus, waitingForInput]
   );
 
+  const handleEditSession = useCallback(() => {
+    setCurrentSession({
+      run_id: runId,
+      session_name: sessionName,
+    });
+    setIsEditModalOpen(true);
+  }, [runId, sessionName]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsEditModalOpen(false);
+    setTimeout(() => setCurrentSession(null), 300);
+  }, []);
+
+  // Update session name when query cache changes
+  useEffect(() => {
+    if (!runId) return;
+
+    const updateSessionName = () => {
+      const cachedData = queryClient.getQueryData(["userSessions"]);
+      if (cachedData?.pages) {
+        for (const page of cachedData.pages) {
+          const session = page.sessions?.find((s) => s.run_id === runId);
+          if (session?.session_name) {
+            setSessionName(session.session_name);
+            break;
+          }
+        }
+      }
+    };
+
+    // Subscribe to query changes
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (
+        event?.query?.queryKey?.[0] === "userSessions" &&
+        event?.type === "updated"
+      ) {
+        updateSessionName();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [runId, queryClient]);
+
   return (
     <div className="text-white w-full bg-surface flex flex-col flex-1 min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between px-9 py-6 border-b border-stroke">
         <div className="flex items-center gap-2">
-          <p className="font-semibold">{title}</p>
-          <button type="button" onClick={onMinimize} aria-label="Minimize">
-            <TbEdit className="text-md text-secondary" />
-          </button>
+          <p className="font-semibold">{sessionName}</p>
+          {isReadOnly && (
+            <button
+              type="button"
+              onClick={handleEditSession}
+              className="text-secondary hover:text-white transition-colors p-1 hover:bg-background rounded"
+              aria-label="Edit session name"
+            >
+              <TbEdit className="text-md" />
+            </button>
+          )}
         </div>
         <div
           className={`flex items-center border ${statusColor} rounded-md h-[30px] px-4`}
@@ -266,13 +320,19 @@ export default function Hypothesis({
         options={options}
         handleSend={handleSend}
       />
+
+      {/* Edit Session Name Modal */}
+      <EditSessionNameModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseModal}
+        session={currentSession}
+        setSessionName={setSessionName}
+      />
     </div>
   );
 }
 
 Hypothesis.propTypes = {
-  title: PropTypes.string.isRequired,
-  onMinimize: PropTypes.func.isRequired,
-  minimized: PropTypes.bool,
   queryParamRunId: PropTypes.string,
+  queryParamSessionName: PropTypes.string,
 };

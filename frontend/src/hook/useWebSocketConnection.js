@@ -10,6 +10,7 @@ export const useWebSocketConnection = ({
   handleGetUserSessions,
   processMessage,
   saveWaitlistEmail,
+  setSessionName,
   setRunStatus,
   router,
   API_BASE,
@@ -39,7 +40,10 @@ export const useWebSocketConnection = ({
               console.log("🚀 ~ WebSocket opened, loading session");
               if (queryParamRunId) {
                 try {
-                  await handleGetUserSessions(queryParamRunId);
+                  const userSession = await handleGetUserSessions(
+                    queryParamRunId
+                  );
+                  setSessionName(userSession?.session?.session_name || "");
                 } catch (error) {
                   console.error("Failed to fetch user session:", error);
                 }
