@@ -10,6 +10,7 @@ export default function Repositories({
   onLoadMore,
   hasMore,
   isLoadingMore,
+  onEditSession,
 }) {
   const defaultIcon = () => (
     <TbFolderCode className="text-2xl text-secondary" />
@@ -42,6 +43,7 @@ export default function Repositories({
       onLoadMore={onLoadMore}
       hasMore={hasMore}
       isLoadingMore={isLoadingMore}
+      onDotsClick={onEditSession}
     />
   );
 }
@@ -51,4 +53,5 @@ Repositories.propTypes = {
   onLoadMore: PropTypes.func,
   hasMore: PropTypes.bool,
   isLoadingMore: PropTypes.bool,
+  onEditSession: PropTypes.func,
 };
