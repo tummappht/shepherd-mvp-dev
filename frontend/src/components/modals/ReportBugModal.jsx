@@ -1,12 +1,11 @@
-import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import Modal from "./modal/Modal";
-import FileDropZone from "./FileDropZone";
+import { useMutation } from "@tanstack/react-query";
+import Modal from "../modal/Modal";
+import FileDropZone from "../FileDropZone";
 import { serviceReportIssue } from "@/services/report";
+import PropTypes from "prop-types";
 
 export default function ReportBugModal({ isOpen, onClose }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const {
     control,
     handleSubmit,
@@ -20,37 +19,40 @@ export default function ReportBugModal({ isOpen, onClose }) {
     },
   });
 
-  const onSubmit = async (data) => {
-    setIsSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append("text", data.description);
-
-      // Append multiple images
-      if (data.images && data.images.length > 0) {
-        Array.from(data.images).forEach((file, index) => {
-          formData.append("images", file);
-        });
-      }
-
+  const reportIssueMutation = useMutation({
+    mutationFn: async (formData) => {
       const response = await serviceReportIssue(formData);
-
       if (!response.success) {
         throw new Error(`API error: ${response.status}`);
       }
-
+      return response;
+    },
+    onSuccess: () => {
       reset();
       onClose();
-    } catch (error) {
+    },
+    onError: (error) => {
       alert("Failed to submit bug report. Please try again later.");
       console.error("Error submitting bug report:", error);
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+
+  const onSubmit = (data) => {
+    const formData = new FormData();
+    formData.append("text", data.description);
+
+    // Append multiple images
+    if (data.images && data.images.length > 0) {
+      Array.from(data.images).forEach((file) => {
+        formData.append("images", file);
+      });
     }
+
+    reportIssueMutation.mutate(formData);
   };
 
   const handleClose = () => {
-    if (!isSubmitting) {
+    if (!reportIssueMutation.isPending) {
       reset();
       onClose();
     }
@@ -83,9 +85,13 @@ export default function ReportBugModal({ isOpen, onClose }) {
               placeholder="Please describe the bug, including what you expected to happen and what actually happened..."
               {...register("description", {
                 required: "Description is required",
+                minLength: {
+                  value: 10,
+                  message: "Description must be at least 10 characters",
+                },
               })}
               aria-invalid={errors.description ? "true" : "false"}
-              disabled={isSubmitting}
+              disabled={reportIssueMutation.isPending}
             />
             {errors.description && (
               <span className="text-red-500 text-xs mt-1">
@@ -109,7 +115,7 @@ export default function ReportBugModal({ isOpen, onClose }) {
                   maxFileSize={5 * 1024 * 1024} // 5MB per file
                   maxFiles={10}
                   multiple
-                  disabled={isSubmitting}
+                  disabled={reportIssueMutation.isPending}
                   {...field}
                 />
               )}
@@ -123,23 +129,28 @@ export default function ReportBugModal({ isOpen, onClose }) {
             type="button"
             className="px-4 py-2 rounded-md border border-gray-border hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full"
             onClick={handleClose}
-            disabled={isSubmitting}
+            disabled={reportIssueMutation.isPending}
           >
             Cancel
           </button>
           <button
             type="submit"
             className={`px-4 py-2 rounded-md transition-all flex items-center justify-center w-full ${
-              !isSubmitting
+              !reportIssueMutation.isPending
                 ? "bg-primary hover:bg-primary-hover"
                 : "bg-gray-500 cursor-not-allowed"
             }`}
-            disabled={isSubmitting}
+            disabled={reportIssueMutation.isPending}
           >
-            Submit
+            {reportIssueMutation.isPending ? "Submitting..." : "Submit"}
           </button>
         </div>
       </form>
     </Modal>
   );
 }
+
+ReportBugModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+};

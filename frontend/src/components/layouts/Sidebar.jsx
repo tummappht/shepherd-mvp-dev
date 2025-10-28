@@ -12,8 +12,8 @@ import {
 } from "react-icons/tb";
 import { useSession, signOut } from "next-auth/react";
 import { clearAuthToken } from "@/services/utils";
-import ReportBugModal from "../ReportBugModal";
 import Dropdown from "../Dropdown";
+import ReportBugModal from "../modals/ReportBugModal";
 
 const MENU_ITEMS = [
   {

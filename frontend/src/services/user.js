@@ -8,6 +8,6 @@ export const serviceUserSessionByRunId = async (runId) => {
   return get(`/user/sessions/${runId}`);
 };
 
-export const serviceUpdateUserSessionName = async (runId, name) => {
-  return patch(`/user/sessions/${runId}/name`, { name });
+export const serviceUpdateUserSessionName = async (runId, session_name) => {
+  return patch(`/user/sessions/${runId}/name`, { session_name });
 };

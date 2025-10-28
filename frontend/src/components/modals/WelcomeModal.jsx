@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import Modal from "./modal/Modal";
+import { useState } from "react";
+import Modal from "../modal/Modal";
 
 export default function WelcomeModal() {
   const [showModal, setShowModal] = useState(true);
