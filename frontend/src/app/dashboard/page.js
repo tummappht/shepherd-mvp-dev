@@ -24,13 +24,22 @@ export default function Dashboard() {
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ["userSessions"],
-    queryFn: ({ pageParam = 0 }) =>
-      serviceUserSessions({ limit: 10, offset: pageParam }),
+    queryFn: async ({ pageParam = 0 }) => {
+      try {
+        return await serviceUserSessions({ limit: 10, offset: pageParam });
+      } catch (_err) {
+        return { sessions: [] };
+      }
+    },
     getNextPageParam: (lastPage, allPages) => {
-      const currentOffset = allPages.length * 10;
-      return lastPage?.sessions?.length === 10 ? currentOffset : undefined;
+      const pageSize = 10;
+      const currentOffset = allPages.length * pageSize;
+      return lastPage?.sessions?.length === pageSize
+        ? currentOffset
+        : undefined;
     },
     initialPageParam: 0,
+    retry: false,
   });
 
   const sessions = data?.pages.flatMap((page) => page.sessions) || [];
