@@ -241,8 +241,7 @@ export const useWebSocketMessages = ({
   const handleCompleteMessage = useCallback(() => {
     console.log("Run complete");
     cancelRun();
-    setRunStatus(RUN_STATUS.ENDED);
-  }, [cancelRun, setRunStatus]);
+  }, [cancelRun]);
 
   const handleStderrMessage = useCallback(
     (msg) => {
