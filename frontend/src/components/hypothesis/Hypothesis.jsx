@@ -47,7 +47,7 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
   const [messages, setMessages] = useState([]);
   const [waitingForInput, setWaitingForInput] = useState(false);
   const [runStatus, setRunStatus] = useState(RUN_STATUS.INITIALIZING);
-  const [options, setOptions] = useState([]);
+  const [extraInput, setExtraInput] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
 
@@ -91,7 +91,6 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
             "Run cancelled"
           );
           socketRef.current = null;
-          console.log("Closing WebSocket connection ");
         }
       } catch (error) {
         console.error("Failed to cancel run:", error);
@@ -122,7 +121,7 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
     addUserMessage,
     setWaitingForInput,
     setRunStatus,
-    setOptions,
+    setExtraInput,
     cancelRun,
     focusInput,
     isReadOnly,
@@ -164,41 +163,46 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
       if (!waitingForInput) return;
 
       const lastMessage = messages[messages.length - 1];
+      const lastMessageText = lastMessage?.text?.toLowerCase() || "";
+      const isSystemMessage = lastMessage?.from === "system";
 
-      // Allow empty input only for non-deployable files prompt
       const isAskingForInterfaces =
-        lastMessage?.from === "system" &&
-        lastMessage.text
-          .toLowerCase()
-          .includes(MESSAGE_PATTERNS.NON_DEPLOYABLE_FILES_PROMPT);
-
-      if (!value.trim() && !isAskingForInterfaces) return;
-
-      // Handle "run another MAS" prompt - cancel if user declines
-      const isRunAnotherPrompt =
-        lastMessage?.from === "system" &&
-        lastMessage.text
-          .toLowerCase()
-          .includes(MESSAGE_PATTERNS.RUN_ANOTHER_MAS_PROMPT);
-
-      if (isRunAnotherPrompt) {
-        const userResponse = value.trim().toLowerCase();
-
-        if (userResponse !== "y" && userResponse !== "yes") {
-          console.log("User declined to run another MAS - canceling run");
-          addUserMessage(value, type);
-          sendSocketMessage(value);
-          addMessage("Session has ended successfully.", MESSAGE_TYPES.END);
-          cancelRun();
-          setWaitingForInput(false);
-          return;
-        }
+        isSystemMessage &&
+        lastMessageText.includes(
+          MESSAGE_PATTERNS.NON_DEPLOYABLE_FILES_PROMPT.toLowerCase()
+        );
+      if (!value?.trim() && !isAskingForInterfaces) {
+        return;
       }
 
+      const isRunAnotherPrompt =
+        isSystemMessage &&
+        lastMessageText.includes(
+          MESSAGE_PATTERNS.RUN_ANOTHER_MAS_PROMPT.toLowerCase()
+        );
+
+      // Handle "run another MAS" prompt
+      if (isRunAnotherPrompt) {
+        const userChoice = value === "yes" ? "y" : "n";
+
+        addUserMessage(value, type);
+        sendSocketMessage(userChoice);
+
+        if (userChoice === "n") {
+          addMessage("Session has ended successfully.", MESSAGE_TYPES.END);
+          cancelRun();
+        }
+
+        setWaitingForInput(false);
+        setExtraInput(null);
+        return;
+      }
+
+      // Handle regular input
       addUserMessage(value, type);
       sendSocketMessage(value);
       setWaitingForInput(false);
-      setOptions([]);
+      setExtraInput(null);
     },
     [
       waitingForInput,
@@ -317,7 +321,7 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
       {/* Input */}
       <HypothesisInput
         waitingForInput={waitingForInput}
-        options={options}
+        extraInput={extraInput}
         handleSend={handleSend}
       />
 

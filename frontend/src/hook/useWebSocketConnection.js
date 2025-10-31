@@ -18,6 +18,12 @@ export const useWebSocketConnection = ({
   const socketRef = useRef(null);
   const startedRef = useRef(false);
 
+  // useEffect(() => {
+  //   mockResultsHypothesis.forEach((x) => {
+  //     processMessage(x.data);
+  //   });
+  // }, []);
+
   useEffect(() => {
     if (!socketUrl) return;
 
@@ -125,6 +131,7 @@ export const useWebSocketConnection = ({
     handleGetUserSessions,
     processMessage,
     saveWaitlistEmail,
+    setSessionName,
     setRunStatus,
     router,
     API_BASE,
