@@ -712,3 +712,30 @@ export const mockMessage = [
     type: "description",
   },
 ];
+
+export const mockResultsHypothesis = [
+  {
+    type: "receive",
+    time: 1761927662.088517,
+    opcode: 1,
+    data: '{"type":"stream_start","stream_id":"stream_124","tag_type":"USER_INPUT"}',
+  },
+  {
+    type: "receive",
+    time: 1761927662.0886018,
+    opcode: 1,
+    data: '{"type":"user-input","data":{"tag_type":"user_input","timestamp":"2025-10-31T16:21:01.795290+00:00","prompt":"Run another MAS? (y/N): ","value":null},"tag_type":"USER_INPUT","stream_id":"stream_124","stream_complete":true}',
+  },
+  {
+    type: "receive",
+    time: 1761927662.0887558,
+    opcode: 1,
+    data: '{"type":"prompt","data":{"prompt":"Run another MAS? (y/N):","multiline":false}}',
+  },
+  {
+    type: "receive",
+    time: 1761927662.089063,
+    opcode: 1,
+    data: '{"type":"stream_end","stream_id":"stream_124","tag_type":"USER_INPUT"}',
+  },
+];

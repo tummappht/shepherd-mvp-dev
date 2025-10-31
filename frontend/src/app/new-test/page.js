@@ -73,7 +73,7 @@ export default function NewTest() {
       const status = res?.status || "Error";
 
       setSocketStatus(status);
-      router.push("/mas-run");
+      router.push("/mas-run?session_name=" + encodeURIComponent(sessionName));
     } catch (error) {
       console.error("Error during form submission:", error);
       alert("An error occurred while submitting the form. Please try again.");

@@ -5,17 +5,34 @@ import { TbArrowUp } from "react-icons/tb";
 import { useForm, Controller } from "react-hook-form";
 import TreeCheckboxList from "../treeSelect/TreeSelect";
 import { CONTENT_TYPES } from "@/hook/useWebSocketMessages";
+import RunAnotherMasRadio from "@/app/mas-run/_components/RunAnotherMasRadio";
 
 export default function HypothesisInput({
   waitingForInput = false,
-  options = [],
+  extraInput,
   handleSend = () => {},
 }) {
-  const isOptions = useMemo(() => options && options.length > 0, [options]);
-  const isDisabledInput = useMemo(
-    () => isOptions || !waitingForInput,
-    [isOptions, waitingForInput]
+  const type = useMemo(() => extraInput && extraInput.type, [extraInput]);
+  const options = useMemo(
+    () => (extraInput && extraInput.options) || [],
+    [extraInput]
   );
+
+  const isDisabledInput = useMemo(
+    () => extraInput || !waitingForInput,
+    [extraInput, waitingForInput]
+  );
+
+  const inputPlaceHolder = useMemo(() => {
+    switch (type) {
+      case CONTENT_TYPES.OPTION:
+        return "Select Checkbox Option";
+      case CONTENT_TYPES.RADIO:
+        return "Select Option";
+      default:
+        return "Ask anything";
+    }
+  }, [type]);
 
   const {
     control,
@@ -32,22 +49,25 @@ export default function HypothesisInput({
 
   const onSubmit = async (data) => {
     let value = "";
-    if (isOptions) {
-      value = data.selectedOptions;
-    } else {
-      value = data.hypothesisInput;
+    switch (type) {
+      case CONTENT_TYPES.OPTION:
+        value = JSON.stringify(data.selectedOptions);
+        break;
+      case CONTENT_TYPES.RADIO:
+        value = data.runAnotherMasRadio;
+        break;
+      default:
+        value = data.hypothesisInput;
     }
 
-    const inputType = isOptions ? CONTENT_TYPES.OPTION : CONTENT_TYPES.INPUT;
-
-    handleSend(JSON.stringify(value), inputType);
+    handleSend(value, type);
     reset();
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="mb-2 px-7">
-        {isOptions && (
+      <div className="-mt-3 mb-2 px-7">
+        {type == CONTENT_TYPES.OPTION && (
           <Controller
             name="selectedOptions"
             control={control}
@@ -61,12 +81,24 @@ export default function HypothesisInput({
             )}
           />
         )}
+        {type == CONTENT_TYPES.RADIO && (
+          <Controller
+            name="runAnotherMasRadio"
+            control={control}
+            render={({ field }) => (
+              <RunAnotherMasRadio
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        )}
       </div>
       <div className="pb-5 px-7 relative">
         <input
           name="hypothesisInput"
           type="text"
-          placeholder={isOptions ? "Select Checkbox Option" : "Ask anything"}
+          placeholder={inputPlaceHolder}
           className="w-full bg-background border border-stroke rounded-md py-4 pl-6 pr-14 text-md text-white placeholder:text-secondary placeholder:italic"
           disabled={isDisabledInput}
           {...register("hypothesisInput", {

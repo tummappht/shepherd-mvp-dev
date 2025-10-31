@@ -23,6 +23,7 @@ export const CONTENT_TYPES = {
   INPUT: "input",
   OPTION: "option",
   TABLE: "table",
+  RADIO: "radio",
 };
 
 // Message patterns
@@ -30,6 +31,7 @@ export const MESSAGE_PATTERNS = {
   GITHUB_URL_PROMPT: "Please enter a GitHub URL",
   CONTRACT_SELECTION_PROMPT:
     "Select the contracts and functions you want to test",
+  UPDATED_CHUNK_MAP_PROMPT: "Updated chunk map",
   NON_DEPLOYABLE_FILES_PROMPT:
     "file names that are not deployable like interfaces",
   RUN_ANOTHER_MAS_PROMPT: "run another mas",
@@ -53,7 +55,7 @@ export const useWebSocketMessages = ({
   addUserMessage,
   setWaitingForInput,
   setRunStatus,
-  setOptions,
+  setExtraInput,
   cancelRun,
   focusInput,
   isReadOnly = false,
@@ -70,62 +72,77 @@ export const useWebSocketMessages = ({
       const isOptionsCase = promptText.includes(
         MESSAGE_PATTERNS.CONTRACT_SELECTION_PROMPT
       );
-
-      // Handle contract selection prompt with options
       if (isOptionsCase) {
         try {
           const promptMsg = JSON.parse(promptText || "{}");
           promptText = promptMsg?.prompt || promptText;
           const options = promptMsg?.options || [];
-          setOptions(options);
+          setExtraInput({ type: CONTENT_TYPES.OPTION, options });
         } catch {
           return;
         }
+      }
+
+      const isRunAnotherMasPrompt = promptText
+        .toLowerCase()
+        .includes(MESSAGE_PATTERNS.RUN_ANOTHER_MAS_PROMPT);
+      if (isRunAnotherMasPrompt) {
+        setExtraInput({ type: CONTENT_TYPES.RADIO });
       }
 
       addMessage(promptText, MESSAGE_TYPES.PROMPT);
       setWaitingForInput(true);
       focusInput();
     },
-    [addMessage, focusInput, setWaitingForInput, setOptions, isReadOnly]
+    [addMessage, focusInput, setWaitingForInput, setExtraInput, isReadOnly]
   );
 
   const handleUserInputMessage = useCallback(
     (msg) => {
       if (!isReadOnly) return;
+
       let promptText = msg.data?.prompt || "";
       const value = msg.data?.value;
 
-      const isOptionsCase = promptText.includes(
+      // Start System message handling
+      const isContractSelectionCase = promptText.includes(
         MESSAGE_PATTERNS.CONTRACT_SELECTION_PROMPT
       );
-      if (isOptionsCase) {
+      if (isContractSelectionCase) {
         const promptMsg = JSON.parse(promptText || "{}");
         promptText = promptMsg?.prompt || promptText;
         addMessage(promptText, MESSAGE_TYPES.PROMPT);
         return;
       }
 
-      const isSystem = Boolean(
+      const isSystemMessage = Boolean(
         msg.data?.value === null || msg.data?.value === undefined
       );
-      if (isSystem) {
+      if (isSystemMessage) {
         addMessage(promptText, MESSAGE_TYPES.PROMPT);
         return;
       }
 
-      if (!value.includes("key") || !value.includes("childs")) {
-        //Input case
-        addUserMessage(msg.data?.value || "", CONTENT_TYPES.INPUT);
+      // Start User input message handling
+      const isUpdatedChunkMapCase = promptText.includes(
+        MESSAGE_PATTERNS.UPDATED_CHUNK_MAP_PROMPT
+      );
+      if (isUpdatedChunkMapCase) {
+        addUserMessage(value, CONTENT_TYPES.OPTION);
         return;
-      } else {
-        // Options case
-        try {
-          addUserMessage(value, CONTENT_TYPES.OPTION);
-        } catch {
-          return;
-        }
       }
+
+      const isRunAnotherMasPrompt = promptText
+        .toLowerCase()
+        .includes(MESSAGE_PATTERNS.RUN_ANOTHER_MAS_PROMPT);
+      if (isRunAnotherMasPrompt) {
+        var radioValue = value.includes("y") ? "yes" : "no";
+        addUserMessage(radioValue, CONTENT_TYPES.RADIO);
+        return;
+      }
+
+      addUserMessage(msg.data?.value || "", CONTENT_TYPES.INPUT);
+      return;
     },
     [addMessage, addUserMessage, isReadOnly]
   );

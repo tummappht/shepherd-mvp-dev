@@ -10,7 +10,7 @@ export default function Providers({ children }) {
 
   return (
     <SessionProvider
-      refetchInterval={30 * 60} // Refetch session every 30 minutes
+      refetchInterval={60 * 60} // Refetch session every 60 minutes
       refetchOnWindowFocus={true}
     >
       <QueryClientProvider client={queryClient}>
