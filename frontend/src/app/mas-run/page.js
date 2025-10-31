@@ -7,15 +7,19 @@ import { useSearchParams } from "next/navigation";
 
 function MasRunContent() {
   const searchParams = useSearchParams();
-  const runIdFromQuery = searchParams.get("run_id");
+  const queryParamRunId = searchParams.get("run_id");
+  const queryParamSessionName = searchParams.get("session_name");
 
   return (
     <div className="container mx-auto h-full max-h-full grid grid-cols-2 gap-[1px] bg-stroke rounded-lg overflow-hidden">
       {/* Hypothesis Section */}
-      <HypothesisManager runIdFromQuery={runIdFromQuery} />
+      <HypothesisManager
+        queryParamRunId={queryParamRunId}
+        queryParamSessionName={queryParamSessionName}
+      />
 
       {/* Diagram Section */}
-      <AgentWorkflowDiagram runIdFromQuery={runIdFromQuery} />
+      <AgentWorkflowDiagram queryParamRunId={queryParamRunId} />
     </div>
   );
 }
