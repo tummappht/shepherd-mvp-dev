@@ -109,8 +109,8 @@ function processMessages(messages) {
   return { contractsMap, edgesData };
 }
 
-function DiagramInner({ runIdFromQuery }) {
-  const { socketUrl, getSingletonWS } = useRuns(runIdFromQuery);
+function DiagramInner({ queryParamRunId }) {
+  const { socketUrl, getSingletonWS } = useRuns(queryParamRunId);
   const { fitView } = useReactFlow();
   const [selectedExecution, setSelectedExecution] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
@@ -339,20 +339,20 @@ function DiagramInner({ runIdFromQuery }) {
   );
 }
 
-export default function AgentWorkflowDiagram({ runIdFromQuery }) {
+export default function AgentWorkflowDiagram({ queryParamRunId }) {
   return (
     <div style={{ width: "100%", height: "100%", background: "#0f0f23" }}>
       <ReactFlowProvider>
-        <DiagramInner runIdFromQuery={runIdFromQuery} />
+        <DiagramInner queryParamRunId={queryParamRunId} />
       </ReactFlowProvider>
     </div>
   );
 }
 
 AgentWorkflowDiagram.propTypes = {
-  runIdFromQuery: PropTypes.string,
+  queryParamRunId: PropTypes.string,
 };
 
 DiagramInner.propTypes = {
-  runIdFromQuery: PropTypes.string,
+  queryParamRunId: PropTypes.string,
 };

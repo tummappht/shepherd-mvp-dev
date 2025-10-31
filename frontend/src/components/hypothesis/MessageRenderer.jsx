@@ -3,12 +3,14 @@ import TreeSelect from "../treeSelect/TreeSelect";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MESSAGE_TYPES, CONTENT_TYPES } from "@/hook/useWebSocketMessages";
+import RunAnotherMasRadio from "@/app/mas-run/_components/RunAnotherMasRadio";
 
 export default function MessageRenderer({ msg }) {
   const isFromUser = msg.from === "user";
 
   if (isFromUser) {
     const isOption = msg.type === CONTENT_TYPES.OPTION;
+    const isRadio = msg.type === CONTENT_TYPES.RADIO;
 
     if (isOption) {
       try {
@@ -24,6 +26,10 @@ export default function MessageRenderer({ msg }) {
           </span>
         );
       }
+    }
+
+    if (isRadio) {
+      return <RunAnotherMasRadio value={msg.text} isReadOnly />;
     }
 
     return (
