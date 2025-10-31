@@ -84,8 +84,12 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
     async (delayMs = CANCEL_RUN_DEFAULT_DELAY) => {
       try {
         await handleCancelRun(delayMs);
+        setRunStatus(RUN_STATUS.ENDED);
         setWaitingForInput(false);
         if (socketRef.current) {
+          socketRef.current.onclose = null;
+          socketRef.current.onerror = null;
+          socketRef.current.onmessage = null;
           socketRef.current.close(
             WEBSOCKET_CLOSE_CODES.NORMAL,
             "Run cancelled"
