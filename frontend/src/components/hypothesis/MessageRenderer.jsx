@@ -47,7 +47,7 @@ export default function MessageRenderer({ msg }) {
   const isRenderAsMarkdown = Boolean(msg.text?.includes("|"));
   if (isRenderAsMarkdown) {
     return (
-      <div className={`pl-7 ${textColor}`}>
+      <div className={`pl-7 ${textColor} markdown-content`}>
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
       </div>
     );
@@ -61,7 +61,7 @@ export default function MessageRenderer({ msg }) {
     const description = msg.text.description || "";
 
     return (
-      <div className={`${textColor} pl-7 markdown-content`}>
+      <div className={`${textColor} pl-7`}>
         <div className="flex flex-col border border-secondary p-4 gap-4">
           <span>{header}</span>
           <div className="flex flex-col gap-7">
