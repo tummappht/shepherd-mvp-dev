@@ -61,7 +61,7 @@ export default function MessageRenderer({ msg }) {
     const description = msg.text.description || "";
 
     return (
-      <div className={`${textColor} pl-7`}>
+      <div className={`${textColor} pl-7 markdown-content`}>
         <div className="flex flex-col border border-secondary p-4 gap-4">
           <span>{header}</span>
           <div className="flex flex-col gap-7">
