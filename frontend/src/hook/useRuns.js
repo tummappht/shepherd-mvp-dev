@@ -79,7 +79,7 @@ const getSingletonWebSocket = (url) => {
 };
 
 export const useRuns = (queryParamRunId = null) => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const { setSocketStatus, socketStatus } = useSocketStatus();
   const [runId, setRunId] = useState(
@@ -104,8 +104,9 @@ export const useRuns = (queryParamRunId = null) => {
 
   const socketUrl = useMemo(() => {
     if (queryParamRunId) {
-      if (session) {
-        const userId = session?.user?.id || "";
+      if (status === "loading") return null; // Wait for session to load
+      if (session?.user?.id) {
+        const userId = session.user.id;
         return getWebSocketUrl(`${userId}_${queryParamRunId}`);
       }
     } else {
@@ -113,7 +114,7 @@ export const useRuns = (queryParamRunId = null) => {
     }
 
     return null;
-  }, [queryParamRunId, runId, session]);
+  }, [queryParamRunId, runId, session?.user?.id, status]);
 
   const resetRunId = useCallback(() => {
     const newRunId = generateRunId();
