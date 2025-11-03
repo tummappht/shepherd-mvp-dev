@@ -6,15 +6,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 
 export default function Providers({ children }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 5 * 60 * 1000,
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
+          },
+        },
+      })
+  );
 
   return (
-    <SessionProvider
-      refetchInterval={60 * 60} // Refetch session every 60 minutes
-      refetchOnWindowFocus={true}
-    >
+    <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
       <QueryClientProvider client={queryClient}>
-        <SessionMonitor />
+        {/* <SessionMonitor /> */}
         <SocketStatusProvider>{children}</SocketStatusProvider>
       </QueryClientProvider>
     </SessionProvider>
