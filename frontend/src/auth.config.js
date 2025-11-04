@@ -7,6 +7,7 @@ export const authConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.isEligible = user.isEligible;
       }
 
       const now = Math.floor(Date.now() / 1000);
@@ -37,6 +38,7 @@ export const authConfig = {
       }
 
       session.user.id = token.sub || token.id;
+      session.user.isEligible = token.isEligible;
 
       // Store token metadata for client-side use
       session.customTokenIssued = token.customTokenIssued;

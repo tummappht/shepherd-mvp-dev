@@ -9,7 +9,6 @@ import Card, {
 import { FaSyncAlt, FaGithub, FaExclamationTriangle } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { signIn } from "next-auth/react";
-import Image from "next/image";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -123,7 +122,7 @@ export default function Login() {
             <form
               onSubmit={handleSubmit}
               autoComplete="off"
-              className="flex flex-col gap-4 opacity-30 cursor-not-allowed hidden"
+              className="hidden flex-col gap-4 opacity-30 cursor-not-allowed"
             >
               <div>
                 <label

@@ -22,15 +22,17 @@ export default auth(async function middleware(req) {
   }
 
   const session = await auth();
+  const isNotEligible = session?.user?.isEligible === false;
   const baseUrl = req.url;
 
-  if (!session) {
+  if (!session || isNotEligible) {
     const isPublic = publicPaths.some((path) => path === pathname);
     if (!isPublic) {
       return NextResponse.redirect(new URL("/login", baseUrl));
     }
   }
-  if (session && pathname === "/login") {
+
+  if (session && !isNotEligible && pathname === "/login") {
     return NextResponse.redirect(new URL("/", baseUrl));
   }
 });
