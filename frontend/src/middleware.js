@@ -25,6 +25,11 @@ export default auth(async function middleware(req) {
   const isNotEligible = session?.user?.isEligible === false;
   const baseUrl = req.url;
 
+  // Sign out users who don't have isEligible property
+  if (session?.user && session.user.isEligible === undefined) {
+    return NextResponse.redirect(new URL("/api/auth/signout", baseUrl));
+  }
+
   if (!session || isNotEligible) {
     const isPublic = publicPaths.some((path) => path === pathname);
     if (!isPublic) {
