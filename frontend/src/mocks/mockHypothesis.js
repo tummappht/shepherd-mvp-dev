@@ -716,26 +716,8 @@ export const mockMessage = [
 export const mockResultsHypothesis = [
   {
     type: "receive",
-    time: 1761927662.088517,
+    time: 1762364368.691207,
     opcode: 1,
-    data: '{"type":"stream_start","stream_id":"stream_124","tag_type":"USER_INPUT"}',
-  },
-  {
-    type: "receive",
-    time: 1761927662.0886018,
-    opcode: 1,
-    data: '{"type":"user-input","data":{"tag_type":"user_input","timestamp":"2025-10-31T16:21:01.795290+00:00","prompt":"Run another MAS? (y/N): ","value":null},"tag_type":"USER_INPUT","stream_id":"stream_124","stream_complete":true}',
-  },
-  {
-    type: "receive",
-    time: 1761927662.0887558,
-    opcode: 1,
-    data: '{"type":"prompt","data":{"prompt":"Run another MAS? (y/N):","multiline":false}}',
-  },
-  {
-    type: "receive",
-    time: 1761927662.089063,
-    opcode: 1,
-    data: '{"type":"stream_end","stream_id":"stream_124","tag_type":"USER_INPUT"}',
+    data: '{"type":"agent","data":{"tag_type":"agent","timestamp":"2025-11-05T17:39:28.482236+00:00","agent_type":"reporter","content":[{"type":"header","level":1,"content":"INCONCLUSIVE VULNERABILITY REPORT"},{"type":"header","level":2,"content":"Summary"},{"type":"text","content":"The analysis cannot be finalized due to the failure in retrieving the critical state information from the FluxToken contract. Specifically, the \'getUnclaimedFlux\' function call did not succeed, blocking us from establishing the baseline unclaimedFlux value needed to test the vulnerability hypothesis for repeated dust locks and merges."},{"type":"header","level":2,"content":"Missing Evidence"},{"type":"text","content":"- Transaction Hash — Not necessary for read-only view function failures.\\n- Before/After State — The pivotal \'getUnclaimedFlux\' call failed, so the initial state could not be recorded.\\n- Source Code Location — The exact spot in the code where getUnclaimedFlux is failing could not be determined without successful execution.\\n- Quantified Impact — The impact measurement relies on comparative unclaimedFlux calculations that couldn\'t be performed."},{"type":"header","level":2,"content":"Recommendation"},{"type":"text","content":"1. Verify the correct deployment of the FluxToken contract at the given address on the testing network.\\n2. Consider using a simple view function, such as obtaining the contract\'s name, to ensure calls are correctly reaching the contract.\\n3. Confirm that time advancements or account states are appropriately set for each stage of interaction, in line with the hypothesis requirements.\\n4. Review address selection if multiple sets of addresses were provided; ensure the second set is utilized if applicable."}],"is_reporter":true},"tag_type":"AGENT","stream_id":"stream_100","stream_complete":true}',
   },
 ];

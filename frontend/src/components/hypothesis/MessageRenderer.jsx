@@ -39,8 +39,11 @@ export default function MessageRenderer({ msg }) {
     );
   }
 
+  const isHeader = msg.type === CONTENT_TYPES.HEADER;
   const isWhiteText =
-    msg.type === MESSAGE_TYPES.PROMPT || msg.type === MESSAGE_TYPES.END;
+    msg.type === MESSAGE_TYPES.PROMPT ||
+    msg.type === MESSAGE_TYPES.END ||
+    isHeader;
   const textColor = isWhiteText ? "text-white" : "text-secondary";
 
   //OLD REPORTER FORMAT
