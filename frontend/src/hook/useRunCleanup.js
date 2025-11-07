@@ -17,7 +17,7 @@ export const useRunCleanup = ({ runId, API_BASE, startedRef }) => {
           body: JSON.stringify({ runId }),
           keepalive: true,
         }).catch(() => {
-          console.log("Backup fetch failed (expected during reload)");
+          console.error("Backup fetch failed (expected during reload)");
         });
       }
     };
