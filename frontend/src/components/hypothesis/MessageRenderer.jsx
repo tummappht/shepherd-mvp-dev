@@ -39,12 +39,16 @@ export default function MessageRenderer({ msg }) {
     );
   }
 
+  const isHeader = msg.type === CONTENT_TYPES.HEADER;
   const isWhiteText =
-    msg.type === MESSAGE_TYPES.PROMPT || msg.type === MESSAGE_TYPES.END;
+    msg.type === MESSAGE_TYPES.PROMPT ||
+    msg.type === MESSAGE_TYPES.END ||
+    isHeader;
   const textColor = isWhiteText ? "text-white" : "text-secondary";
 
   //OLD REPORTER FORMAT
-  const isRenderAsMarkdown = Boolean(msg.text?.includes("|"));
+  const isRenderAsMarkdown =
+    typeof msg.text === "string" && msg.text.includes("|");
   if (isRenderAsMarkdown) {
     return (
       <div className={`pl-7 ${textColor} markdown-content`}>
@@ -61,9 +65,9 @@ export default function MessageRenderer({ msg }) {
     const description = msg.text.description || "";
 
     return (
-      <div className={`${textColor} pl-7`}>
+      <div className={`${textColor} pl-7 w-full`}>
         <div className="flex flex-col border border-secondary p-4 gap-4">
-          <span>{header}</span>
+          {header.length > 0 && <span>{header}</span>}
           <div className="flex flex-col gap-7">
             {data.map((row, rowIndex) => (
               <table key={rowIndex} className="w-full border-collapse">
@@ -80,7 +84,7 @@ export default function MessageRenderer({ msg }) {
               </table>
             ))}
           </div>
-          <span>{description}</span>
+          {description.length > 0 && <span>{description}</span>}
         </div>
       </div>
     );

@@ -1,11 +1,15 @@
-"use client";
 import Login from "@/components/Login";
-import { Suspense } from "react";
+import { auth } from "@/auth";
+import IneligibleUserModal from "@/components/modals/IneligibleUserModal";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await auth();
+  const isIneligible = session?.user?.isEligible === false;
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <>
       <Login />
-    </Suspense>
+      <IneligibleUserModal isShow={isIneligible} />
+    </>
   );
 }
