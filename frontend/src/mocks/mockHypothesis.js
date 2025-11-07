@@ -716,26 +716,8 @@ export const mockMessage = [
 export const mockResultsHypothesis = [
   {
     type: "receive",
-    time: 1761927662.088517,
+    time: 1762364368.691207,
     opcode: 1,
-    data: '{"type":"stream_start","stream_id":"stream_124","tag_type":"USER_INPUT"}',
-  },
-  {
-    type: "receive",
-    time: 1761927662.0886018,
-    opcode: 1,
-    data: '{"type":"user-input","data":{"tag_type":"user_input","timestamp":"2025-10-31T16:21:01.795290+00:00","prompt":"Run another MAS? (y/N): ","value":null},"tag_type":"USER_INPUT","stream_id":"stream_124","stream_complete":true}',
-  },
-  {
-    type: "receive",
-    time: 1761927662.0887558,
-    opcode: 1,
-    data: '{"type":"prompt","data":{"prompt":"Run another MAS? (y/N):","multiline":false}}',
-  },
-  {
-    type: "receive",
-    time: 1761927662.089063,
-    opcode: 1,
-    data: '{"type":"stream_end","stream_id":"stream_124","tag_type":"USER_INPUT"}',
+    data: '{"type":"agent","data":{"tag_type":"agent","timestamp":"2025-11-05T17:39:28.482236+00:00","agent_type":"reporter","content": [ { "type": "header", "level": 1, "content": "CONCLUSIVE VULNERABILITY REPORT" }, { "type": "header", "level": 2, "content": "Summary" }, { "type": "text", "content": "[One short paragraph that clearly states the vulnerability and the ACCEPT/REJECT determination.]" }, { "type": "header", "level": 2, "content": "Evidence Analysis" }, { "type": "text", "content": "**CRITICAL: The table MUST be in markdown format exactly as shown below.** **IMPORTANT: This table will be automatically converted to structured JSON for the frontend.** **The markdown table format is essential for proper parsing - follow this format precisely:**" }, { "type": "table", "header": "", "data": [ { "details": [ {"key": "Evidence Type", "value": "Transaction Hash"}, {"key": "Details", "value": "0x..."}, {"key": "Location", "value": "Exploit transaction"} ] }, { "details": [ {"key": "Evidence Type", "value": "Token/State Changes"}, {"key": "Details", "value": "Before: X • After: Y"}, {"key": "Location", "value": "Contract / storage slot"} ] }, { "details": [ {"key": "Evidence Type", "value": "Source Code"}, {"key": "Details", "value": "contract.sol:Lx"}, {"key": "Location", "value": "Vulnerable code"} ] }, { "details": [ {"key": "Evidence Type", "value": "Impact"}, {"key": "Details", "value": "[quantified value]"}, {"key": "Location", "value": "[affected component]"} ] } ] }, { "type": "header", "level": 2, "content": "Vulnerability Details" }, { "type": "text", "content": "- **Location**: contract/function (file.sol:Lx-Ly) - **Type**: [classification] - **Severity**: [High/Medium/Low with justification]" }, { "type": "header", "level": 2, "content": "Technical Analysis" }, { "type": "text", "content": "[Step-by-step explanation tying the evidence to the vulnerability mechanics.]" }, { "type": "header", "level": 2, "content": "Exploitation Evidence" }, { "type": "text", "content": "- **Transaction Hash**: 0x... - **Before State**: [...] - **After State**: [...] - **Impact**: [quantified damage]" }, { "type": "header", "level": 2, "content": "Determination: ACCEPT/REJECT" }, { "type": "text", "content": "[Explicit reasoning that matches the determination.]" }, { "type": "header", "level": 2, "content": "Mitigation Recommendations" }, { "type": "text", "content": "1. [...] 2. [...] 3. [...]" } ],"is_reporter":true},"tag_type":"AGENT","stream_id":"stream_100","stream_complete":true}',
   },
 ];

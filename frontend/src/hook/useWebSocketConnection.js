@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { WEBSOCKET_CLOSE_CODES } from "@/hook/useRuns";
+// import { mockResultsHypothesis } from "@/mocks/mockHypothesis";
 
 export const useWebSocketConnection = ({
   socketUrl,
