@@ -11,3 +11,7 @@ export const serviceUserSessionByRunId = async (runId) => {
 export const serviceUpdateUserSessionName = async (runId, session_name) => {
   return patch(`/user/sessions/${runId}/name`, { session_name });
 };
+
+export const serviceGetIsUserEligible = async () => {
+  return get(`/isUserEligible`);
+};

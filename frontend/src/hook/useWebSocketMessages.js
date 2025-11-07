@@ -22,6 +22,8 @@ export const MESSAGE_TYPES = {
 export const CONTENT_TYPES = {
   INPUT: "input",
   OPTION: "option",
+  HEADER: "header",
+  TEXT: "text",
   TABLE: "table",
   RADIO: "radio",
 };
@@ -206,8 +208,16 @@ export const useWebSocketMessages = ({
     (msg) => {
       const agentType = msg.data?.agent_type || "Unknown";
       const content = msg.data?.content || msg.data || "";
-      if (content.type === CONTENT_TYPES.TABLE) {
-        addMessage(content, CONTENT_TYPES.TABLE);
+      const isArrayContent = Array.isArray(content);
+
+      if (isArrayContent) {
+        content.forEach((item) => {
+          if (item.type === CONTENT_TYPES.TABLE) {
+            addMessage(item, CONTENT_TYPES.TABLE);
+          } else {
+            addMessage(item.content, item.type);
+          }
+        });
         return;
       }
 

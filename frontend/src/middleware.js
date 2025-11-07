@@ -22,15 +22,22 @@ export default auth(async function middleware(req) {
   }
 
   const session = await auth();
+  const isNotEligible = session?.user?.isEligible === false;
   const baseUrl = req.url;
 
-  if (!session) {
+  // Sign out users who don't have isEligible property
+  if (session?.user && session.user.isEligible === undefined) {
+    return NextResponse.redirect(new URL("/api/auth/force-signout", baseUrl));
+  }
+
+  if (!session || isNotEligible) {
     const isPublic = publicPaths.some((path) => path === pathname);
     if (!isPublic) {
       return NextResponse.redirect(new URL("/login", baseUrl));
     }
   }
-  if (session && pathname === "/login") {
+
+  if (session && !isNotEligible && pathname === "/login") {
     return NextResponse.redirect(new URL("/", baseUrl));
   }
 });

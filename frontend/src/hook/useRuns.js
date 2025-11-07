@@ -68,7 +68,6 @@ const getSingletonWebSocket = (url) => {
   const cleanup = () => {
     if (pool.get(url) === ws) {
       pool.delete(url);
-      console.log("WebSocket removed from pool:", url);
     }
   };
 
