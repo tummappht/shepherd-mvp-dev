@@ -65,7 +65,7 @@ export default function MessageRenderer({ msg }) {
     const description = msg.text.description || "";
 
     return (
-      <div className={`${textColor} pl-7 w-full`}>
+      <div className={`${textColor} pt-2 pl-7 w-full`}>
         <div className="flex flex-col border border-secondary p-4 gap-4">
           {header.length > 0 && <span>{header}</span>}
           <div className="flex flex-col gap-7">
@@ -74,7 +74,7 @@ export default function MessageRenderer({ msg }) {
                 <tbody>
                   {row.details.map((detail, detailIndex) => (
                     <tr key={detailIndex}>
-                      <td className="border border-white p-3 text-white">
+                      <td className="border border-white p-3 text-white break-words max-w-0">
                         <p className="font-extrabold mb-1">{detail.key}:</p>
                         <p className="m-0">{detail.value}</p>
                       </td>
