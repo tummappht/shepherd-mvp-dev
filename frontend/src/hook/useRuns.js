@@ -1,4 +1,3 @@
-import { useSocketStatus } from "@/context/SocketStatusContext";
 import {
   serviceStartRun,
   serviceCancelRun,
@@ -80,7 +79,6 @@ const getSingletonWebSocket = (url) => {
 export const useRuns = (queryParamRunId = null) => {
   const { data: session, status } = useSession();
 
-  const { setSocketStatus, socketStatus } = useSocketStatus();
   const [runId, setRunId] = useState(
     () => queryParamRunId || getOrCreateRunId()
   );
@@ -224,14 +222,12 @@ export const useRuns = (queryParamRunId = null) => {
     API_BASE,
     runId,
     socketUrl,
-    socketStatus,
     handleStartRun,
     handleCancelRun,
     handleSaveWaitlistEmail,
     handleGetUserSessions,
     resetRunId,
     getSingletonWS: getSingletonWebSocket,
-    setSocketStatus,
     // Expose mutation states for UI feedback
     isStartingRun: startRunMutation.isPending,
     isCancelingRun: cancelRunMutation.isPending,

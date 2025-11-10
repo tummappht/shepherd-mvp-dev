@@ -20,7 +20,7 @@ export default function NewTest() {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
-  const { handleStartRun, setSocketStatus } = useRuns();
+  const { handleStartRun } = useRuns();
   const {
     control,
     handleSubmit,
@@ -69,10 +69,8 @@ export default function NewTest() {
         formData.append("whitePaper", data.whitePaper[0]);
       }
 
-      const res = await handleStartRun(formData);
-      const status = res?.status || "Error";
+      await handleStartRun(formData);
 
-      setSocketStatus(status);
       router.push("/mas-run?session_name=" + encodeURIComponent(sessionName));
     } catch (error) {
       console.error("Error during form submission:", error);
