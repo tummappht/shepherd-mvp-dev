@@ -34,7 +34,6 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
     runId,
     getSingletonWS,
     socketUrl,
-    socketStatus: contextSocketStatus,
     handleCancelRun,
     handleSaveWaitlistEmail,
     handleGetUserSessions,
@@ -136,7 +135,6 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
     socketUrl,
     runId,
     queryParamRunId,
-    contextSocketStatus,
     getSingletonWS,
     handleGetUserSessions,
     processMessage,
@@ -148,7 +146,7 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
   });
 
   // Run cleanup on page unload
-  useRunCleanup({ runId, API_BASE, startedRef });
+  // useRunCleanup({ runId, API_BASE, startedRef });
 
   // Auto-focus input when waiting for user input
   useEffect(() => {
@@ -223,8 +221,8 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
       [RUN_STATUS.STARTED]:
         "text-text-success border-stroke-success bg-bg-success",
       [RUN_STATUS.AT_CAPACITY]:
-        "text-text-error border-stroke-error bg-bg-error",
-      [RUN_STATUS.ERROR]: "text-text-error border-stroke-error bg-bg-error",
+        "text-text-failed border-stroke-failed bg-bg-failed",
+      [RUN_STATUS.ERROR]: "text-text-failed border-stroke-failed bg-bg-failed",
       [RUN_STATUS.ENDED]:
         "text-text-pending border-stroke-pending bg-bg-pending",
     };
