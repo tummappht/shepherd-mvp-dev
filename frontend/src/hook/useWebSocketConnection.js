@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { WEBSOCKET_CLOSE_CODES } from "@/hook/useRuns";
+import { RUN_STATUS } from "./useWebSocketMessages";
+import { serviceGetRunStatus } from "@/services/runs";
 // import { mockResultsHypothesis } from "@/mocks/mockHypothesis";
 
 export const useWebSocketConnection = ({
   socketUrl,
   runId,
   queryParamRunId,
-  contextSocketStatus,
   getSingletonWS,
   handleGetUserSessions,
   processMessage,
@@ -19,14 +21,18 @@ export const useWebSocketConnection = ({
   const socketRef = useRef(null);
   const startedRef = useRef(false);
 
-  // useEffect(() => {
-  //   mockResultsHypothesis.forEach((x) => {
-  //     processMessage(x.data);
-  //   });
-  // }, []);
+  // Fetch run status using react-query
+  const { data: runStatusData, isSuccess: isRunStatusSuccess } = useQuery({
+    queryKey: ["runStatus", runId],
+    queryFn: () => {
+      return serviceGetRunStatus(runId);
+    },
+    enabled: false,
+  });
 
   useEffect(() => {
     if (!socketUrl) return;
+    if (!isRunStatusSuccess) return;
 
     if (!startedRef.current) {
       startedRef.current = true;
@@ -34,11 +40,17 @@ export const useWebSocketConnection = ({
 
       const startRunThenSocket = async () => {
         try {
-          const socketStatus = contextSocketStatus;
           const isQueryParamRunId =
             queryParamRunId && queryParamRunId.length > 0;
 
-          if (isQueryParamRunId || socketStatus === "started") {
+          // Use runStatus from react-query if available
+          const socketStatus = runStatusData?.status || "";
+
+          if (
+            isQueryParamRunId ||
+            socketStatus === "started" ||
+            socketStatus === "running"
+          ) {
             const socket = getSingletonWS(socketUrl);
             socketRef.current = socket;
 
@@ -105,14 +117,14 @@ export const useWebSocketConnection = ({
             socketStatus === "at capacity" ||
             socketStatus === "queued"
           ) {
-            setRunStatus("At capacity");
+            setRunStatus(RUN_STATUS.AT_CAPACITY);
             const email = prompt(
               "Our server is at capacity! Enter your email to be notified when it's available again:"
             );
             await saveWaitlistEmail(email);
             return;
           } else {
-            setRunStatus("Error");
+            setRunStatus(RUN_STATUS.ERROR);
             console.warn("result status not parsed correctly");
           }
         } catch (error) {
@@ -127,7 +139,6 @@ export const useWebSocketConnection = ({
     socketUrl,
     runId,
     queryParamRunId,
-    contextSocketStatus,
     getSingletonWS,
     handleGetUserSessions,
     processMessage,
@@ -136,6 +147,8 @@ export const useWebSocketConnection = ({
     setRunStatus,
     router,
     API_BASE,
+    runStatusData,
+    isRunStatusSuccess,
   ]);
 
   return { socketRef, startedRef };

@@ -1,9 +1,8 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
-import { SocketStatusProvider } from "@/context/SocketStatusContext";
-import SessionMonitor from "@/components/auth/SessionMonitor";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import TokenRefreshHandler from "@/components/auth/TokenRefreshHandler";
 
 export default function Providers({ children }) {
   const [queryClient] = useState(
@@ -22,8 +21,8 @@ export default function Providers({ children }) {
   return (
     <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
       <QueryClientProvider client={queryClient}>
-        {/* <SessionMonitor /> */}
-        <SocketStatusProvider>{children}</SocketStatusProvider>
+        <TokenRefreshHandler />
+        {children}
       </QueryClientProvider>
     </SessionProvider>
   );
