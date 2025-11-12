@@ -2,44 +2,49 @@ import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
 import NextAuth from "next-auth";
 
-// Initialize Auth.js middleware using the edge-safe configuration
 const { auth } = NextAuth(authConfig);
 
 // Define paths that are accessible without authentication
-const publicPaths = ["/login"];
+const PUBLIC_PATHS = ["/login"];
+const LOGIN_PATH = "/login";
+const HOME_PATH = "/";
+// const FORCE_SIGNOUT_PATH = "/api/auth/force-signout";
+
+// Regular expression to match static file extensions
+const STATIC_FILE_REGEX =
+  /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf|eot|otf|map)$/i;
 
 export default auth(async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // Check if it's a static file
-  const staticFileRegex =
-    /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf)$/;
-  const isStaticFile = staticFileRegex.exec(pathname);
-
-  // Skip middleware for static files
-  if (isStaticFile) {
-    return;
+  if (STATIC_FILE_REGEX.test(pathname)) {
+    return NextResponse.next();
   }
 
-  const session = await auth();
-  const isNotEligible = session?.user?.isEligible === false;
+  const session = req.auth;
   const baseUrl = req.url;
 
-  // Sign out users who don't have isEligible property
-  if (session?.user && session.user.isEligible === undefined) {
-    return NextResponse.redirect(new URL("/api/auth/force-signout", baseUrl));
+  const isEligible = session?.user?.isEligible === true;
+  const hasSession = !!session?.user;
+  console.log("🚀 ~ middleware ~ hasSession:", hasSession);
+
+  // force sign-out for ineligible users
+  // if (hasSession && !isEligible) {
+  //   return NextResponse.redirect(new URL(FORCE_SIGNOUT_PATH, baseUrl));
+  // }
+
+  const isPublicPath = PUBLIC_PATHS.includes(pathname);
+
+  if (!hasSession && !isPublicPath) {
+    return NextResponse.redirect(new URL(LOGIN_PATH, baseUrl));
   }
 
-  if (!session || isNotEligible) {
-    const isPublic = publicPaths.some((path) => path === pathname);
-    if (!isPublic) {
-      return NextResponse.redirect(new URL("/login", baseUrl));
-    }
+  console.log("🚀 ~ middleware ~ isEligible:", isEligible);
+  if (hasSession && isEligible && pathname === LOGIN_PATH) {
+    return NextResponse.redirect(new URL(HOME_PATH, baseUrl));
   }
 
-  if (session && !isNotEligible && pathname === "/login") {
-    return NextResponse.redirect(new URL("/", baseUrl));
-  }
+  return NextResponse.next();
 });
 
 // CRITICAL: The matcher must exclude all paths handled by the Auth.js API.
