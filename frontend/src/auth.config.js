@@ -4,10 +4,10 @@ import GitHub from "next-auth/providers/github";
 export const authConfig = {
   providers: [Google, GitHub],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
-        token.isEligible = user.isEligible;
+        token.isEligible = user.isEligible || false;
       }
 
       const now = Math.floor(Date.now() / 1000);
