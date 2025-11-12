@@ -4,7 +4,11 @@ import IneligibleUserModal from "@/components/modals/IneligibleUserModal";
 
 export default async function LoginPage() {
   const session = await auth();
-  const isIneligible = session?.user?.isEligible === false;
+
+  const isIneligible =
+    session &&
+    (session.user.isEligible === false ||
+      session.user.isEligible === undefined);
 
   return (
     <>
