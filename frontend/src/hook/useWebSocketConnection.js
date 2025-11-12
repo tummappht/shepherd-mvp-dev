@@ -27,7 +27,6 @@ export const useWebSocketConnection = ({
     queryFn: () => {
       return serviceGetRunStatus(runId);
     },
-    enabled: false,
   });
 
   useEffect(() => {

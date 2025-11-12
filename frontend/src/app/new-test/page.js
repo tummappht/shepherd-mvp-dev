@@ -173,7 +173,7 @@ export default function NewTest() {
           </CardDescription>
           <CardContent className="flex flex-col gap-4">
             <div>
-              <p className="mb-2">Description (Optical)</p>
+              <p className="mb-2">Description (Optional)</p>
               <textarea
                 className="w-full py-2 px-3 h-36 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
                 placeholder="Insert documentation..."
@@ -187,7 +187,7 @@ export default function NewTest() {
               )}
             </div>
             <div>
-              <p className="mb-2">White Paper (Optical)</p>
+              <p className="mb-2">White Paper (Optional)</p>
               <Controller
                 control={control}
                 name="whitePaper"
