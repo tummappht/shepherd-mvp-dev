@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Card, {
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/Card";
 
 export default function CreateUserPage() {
   const [email, setEmail] = useState("");
@@ -45,22 +50,18 @@ export default function CreateUserPage() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="container mx-auto flex flex-col gap-4 max-w-xl py-12"
+      className="container mx-auto flex flex-col gap-4 max-w-2xl"
     >
-      <div className="bg-white rounded-lg shadow p-8 flex flex-col gap-6">
-        <div className="mb-4">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
-            Create Eligible User
-          </h2>
-          <p className="text-sm text-gray-600">
-            Add user emails to the eligible list before they sign in
-          </p>
-        </div>
-        <div className="flex flex-col gap-4">
+      <Card>
+        <CardTitle className="mb-0">Create Eligible User</CardTitle>
+        <CardDescription>
+          Add user emails to the eligible list before they sign in
+        </CardDescription>
+        <CardContent className="flex flex-col gap-4">
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-300 mb-2"
             >
               Email address
             </label>
@@ -77,23 +78,23 @@ export default function CreateUserPage() {
             />
           </div>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="rounded-md bg-red-900/30 border border-red-700/50 p-4">
               <div className="flex">
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Error</h3>
-                  <div className="mt-2 text-sm text-red-700">{error}</div>
+                  <h3 className="text-sm font-medium text-red-400">Error</h3>
+                  <div className="mt-2 text-sm text-red-300">{error}</div>
                 </div>
               </div>
             </div>
           )}
           {message && (
-            <div className="rounded-md bg-green-50 p-4">
+            <div className="rounded-md bg-green-900/30 border border-green-700/50 p-4">
               <div className="flex">
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-green-800">
+                  <h3 className="text-sm font-medium text-green-400">
                     Success
                   </h3>
-                  <div className="mt-2 text-sm text-green-700">
+                  <div className="mt-2 text-sm text-green-300">
                     {message.text}
                     <br />
                     <span className="font-mono text-xs">
@@ -109,30 +110,16 @@ export default function CreateUserPage() {
               </div>
             </div>
           )}
-        </div>
-        <div className="flex flex-row justify-end items-center gap-4 mt-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className={`border-2 rounded-lg transition-all h-12 w-40 text-white text-base font-semibold ${
-              !loading
-                ? "bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700"
-                : "bg-gray-400 border-gray-400 cursor-not-allowed"
-            }`}
-          >
-            {loading ? "Creating..." : "Create Eligible User"}
-          </button>
-        </div>
-        <div className="mt-8">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">How it works</span>
-            </div>
-          </div>
-          <div className="text-sm text-gray-600 space-y-2">
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardTitle className="mb-0">How it works</CardTitle>
+        <CardDescription className="mb-0">
+          Understanding the eligibility process
+        </CardDescription>
+        <CardContent>
+          <div className="text-sm text-gray-400 space-y-2">
             <p>
               • Emails added here will be checked when users sign in with OAuth
             </p>
@@ -145,7 +132,21 @@ export default function CreateUserPage() {
               needed
             </p>
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-row justify-end items-center gap-4">
+        <button
+          type="submit"
+          disabled={loading}
+          className={`border-2 rounded-lg transition-all h-12 px-6 ${
+            !loading
+              ? "bg-primary hover:bg-primary-hover border-primary hover:border-primary-hover text-white"
+              : "bg-gray-500 border-gray-500 cursor-not-allowed text-gray-300"
+          }`}
+        >
+          {loading ? "Creating..." : "Create Eligible User"}
+        </button>
       </div>
     </form>
   );
