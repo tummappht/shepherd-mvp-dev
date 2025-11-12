@@ -1,4 +1,4 @@
-import "../globals.css";
+import "../../globals.css";
 import PropTypes from "prop-types";
 import StaticLayout from "@/components/layouts/StaticLayout";
 
