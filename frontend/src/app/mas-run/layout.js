@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import StaticLayout from "@/components/layouts/StaticLayout";
 
 export const metadata = {
-  title: "Shepherd Security: Diagram",
+  title: "Shepherd Security",
 };
 
 export default function Layout({ children }) {
