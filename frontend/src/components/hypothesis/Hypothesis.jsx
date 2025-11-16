@@ -4,12 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PropTypes from "prop-types";
 import { useRuns, WEBSOCKET_CLOSE_CODES } from "@/hook/useRuns";
-import {
-  useWebSocketMessages,
-  MESSAGE_TYPES,
-  MESSAGE_PATTERNS,
-  RUN_STATUS,
-} from "@/hook/useWebSocketMessages";
+import { useWebSocketMessages } from "@/hook/useWebSocketMessages";
 import { TbEdit } from "react-icons/tb";
 import HypothesisInput from "./HypothesisInput";
 import MessageRenderer from "./MessageRenderer";
@@ -18,21 +13,25 @@ import LoadingIndicator from "./LoadingIndicator";
 import { useWebSocketConnection } from "@/hook/useWebSocketConnection";
 import { useRunCleanup } from "@/hook/useRunCleanup";
 import EditSessionNameModal from "@/components/modals/EditSessionNameModal";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  MESSAGE_PATTERNS,
+  MESSAGE_TYPES,
+  RUN_STATUS,
+} from "@/constants/session";
+import { serviceGetRunStatus } from "@/services/runs";
 
 // Constants
 const AUTO_FOCUS_DELAY = 100;
 const CANCEL_RUN_DEFAULT_DELAY = 5000;
 
 export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   // Hooks
   const {
     API_BASE,
     runId,
-    getSingletonWS,
     socketUrl,
     handleCancelRun,
     handleSaveWaitlistEmail,
@@ -53,6 +52,13 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
   // Refs
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  const { data: runStatusData, isSuccess: isRunStatusSuccess } = useQuery({
+    queryKey: ["runStatus", runId],
+    queryFn: () => {
+      return serviceGetRunStatus(runId);
+    },
+  });
 
   const addMessage = useCallback((text, type = MESSAGE_TYPES.DESCRIPTION) => {
     if (!text) return;
@@ -102,20 +108,6 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
     [handleCancelRun]
   );
 
-  const saveWaitlistEmail = useCallback(
-    async (email) => {
-      if (!email?.trim()) return;
-
-      try {
-        await handleSaveWaitlistEmail(email);
-      } catch (error) {
-        // Error is already handled in the hook
-        console.error("Failed to save email:", error);
-      }
-    },
-    [handleSaveWaitlistEmail]
-  );
-
   const isReadOnly = useMemo(() => Boolean(queryParamRunId), [queryParamRunId]);
 
   // WebSocket message processing hook
@@ -131,18 +123,17 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
   });
 
   // WebSocket connection management
-  const { socketRef, startedRef } = useWebSocketConnection({
+  const { socketRef } = useWebSocketConnection({
     socketUrl,
     runId,
     queryParamRunId,
-    getSingletonWS,
     handleGetUserSessions,
     processMessage,
-    saveWaitlistEmail,
+    handleSaveWaitlistEmail,
     setSessionName,
     setRunStatus,
-    router,
-    API_BASE,
+    runStatusData,
+    isRunStatusSuccess,
   });
 
   // Run cleanup on page unload

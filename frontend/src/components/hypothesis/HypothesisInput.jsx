@@ -4,8 +4,9 @@ import { useMemo } from "react";
 import { TbArrowUp } from "react-icons/tb";
 import { useForm, Controller } from "react-hook-form";
 import TreeCheckboxList from "../treeSelect/TreeSelect";
-import { CONTENT_TYPES } from "@/hook/useWebSocketMessages";
 import RunAnotherMasRadio from "@/app/mas-run/_components/RunAnotherMasRadio";
+import { CONTENT_TYPES } from "@/constants/session";
+import ChoiceRadio from "./ChoiceRadio";
 
 export default function HypothesisInput({
   waitingForInput = false,
@@ -29,6 +30,8 @@ export default function HypothesisInput({
         return "Select Checkbox Option";
       case CONTENT_TYPES.RADIO:
         return "Select Option";
+      case CONTENT_TYPES.CHOICE:
+        return "Select Choice";
       default:
         return "Ask anything";
     }
@@ -55,6 +58,9 @@ export default function HypothesisInput({
         break;
       case CONTENT_TYPES.RADIO:
         value = data.runAnotherMasRadio;
+        break;
+      case CONTENT_TYPES.CHOICE:
+        value = data.selectedChoice;
         break;
       default:
         value = data.hypothesisInput;
@@ -93,6 +99,20 @@ export default function HypothesisInput({
             )}
           />
         )}
+        {type == CONTENT_TYPES.CHOICE && (
+          <Controller
+            name="selectedChoice"
+            control={control}
+            render={({ field }) => (
+              <ChoiceRadio
+                options={options}
+                value={field.value}
+                onChange={field.onChange}
+                isReadOnly={false}
+              />
+            )}
+          />
+        )}
       </div>
       <div className="pb-5 px-7 relative">
         <input
@@ -106,7 +126,7 @@ export default function HypothesisInput({
           })}
         />
         {errors.hypothesisInput && (
-          <p className="text-red-500 text-sm mt-1">
+          <p className="text-text-failed text-sm mt-1">
             {errors.hypothesisInput.message}
           </p>
         )}

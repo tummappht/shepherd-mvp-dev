@@ -9,71 +9,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { serviceUserSessionByRunId } from "@/services/user";
 import { useSession } from "next-auth/react";
+import {
+  generateRunId,
+  getOrCreateRunId,
+  RUN_ID_STORAGE_KEY,
+} from "@/lib/wsPool";
 
 // Constants
-const RUN_ID_STORAGE_KEY = "masRunId";
 
 export const WEBSOCKET_CLOSE_CODES = {
   NORMAL: 1000,
   GOING_AWAY: 1001,
-};
-
-const generateRunId = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `run-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
-};
-
-const getOrCreateRunId = () => {
-  if (typeof window === "undefined") {
-    return generateRunId();
-  }
-
-  try {
-    const stored = sessionStorage.getItem(RUN_ID_STORAGE_KEY);
-    if (stored) return stored;
-
-    const newId = generateRunId();
-    sessionStorage.setItem(RUN_ID_STORAGE_KEY, newId);
-    return newId;
-  } catch (error) {
-    console.error("Failed to access sessionStorage:", error);
-    return generateRunId();
-  }
-};
-
-const getSingletonWebSocket = (url) => {
-  if (typeof window === "undefined") {
-    return new WebSocket(url);
-  }
-
-  // Initialize the WebSocket pool if it doesn't exist
-  const pool = (window.__masWsPool ||= new Map());
-
-  // Check if we already have a connection to this URL
-  const existing = pool.get(url);
-  if (existing && existing.readyState < WebSocket.CLOSING) {
-    return existing; // CONNECTING or OPEN
-  }
-
-  // Create a new connection
-  const ws = new WebSocket(url);
-  pool.set(url, ws);
-
-  // Clean up when the connection closes
-  const cleanup = () => {
-    if (pool.get(url) === ws) {
-      pool.delete(url);
-    }
-  };
-
-  ws.addEventListener("close", cleanup);
-  ws.addEventListener("error", cleanup);
-
-  return ws;
 };
 
 export const useRuns = (queryParamRunId = null) => {
@@ -112,20 +58,6 @@ export const useRuns = (queryParamRunId = null) => {
 
     return null;
   }, [queryParamRunId, runId, session?.user?.id, status]);
-
-  const resetRunId = useCallback(() => {
-    const newRunId = generateRunId();
-
-    if (typeof window !== "undefined") {
-      try {
-        sessionStorage.setItem(RUN_ID_STORAGE_KEY, newRunId);
-      } catch (error) {
-        console.error("Failed to update sessionStorage:", error);
-      }
-    }
-
-    setRunId(newRunId);
-  }, []);
 
   // React Query mutation for starting a run
   const startRunMutation = useMutation({
@@ -226,8 +158,6 @@ export const useRuns = (queryParamRunId = null) => {
     handleCancelRun,
     handleSaveWaitlistEmail,
     handleGetUserSessions,
-    resetRunId,
-    getSingletonWS: getSingletonWebSocket,
     // Expose mutation states for UI feedback
     isStartingRun: startRunMutation.isPending,
     isCancelingRun: cancelRunMutation.isPending,

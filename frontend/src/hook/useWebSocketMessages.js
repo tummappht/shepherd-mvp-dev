@@ -1,57 +1,11 @@
+import {
+  CONTENT_TYPES,
+  MESSAGE_PATTERNS,
+  MESSAGE_TYPES,
+  RUN_STATUS,
+} from "@/constants/session";
 import { useCallback, useMemo } from "react";
 
-// Message types
-export const MESSAGE_TYPES = {
-  PROMPT: "prompt",
-  USER_INPUT: "user-input",
-  DESCRIPTION: "description",
-  PLANNER_STEP: "planner-step",
-  EXECUTOR_TOOL_CALL: "executor-tool-call",
-  EXECUTOR_TOOL_RESULT: "executor-tool-result",
-  AGENT: "agent",
-  OUTPUT: "output",
-  STDOUT: "stdout",
-  LOG: "log",
-  IDLE_TIMEOUT: "idle_timeout",
-  COMPLETE: "complete",
-  STDERR: "stderr",
-  ERROR: "error",
-  END: "end",
-};
-
-export const CONTENT_TYPES = {
-  INPUT: "input",
-  OPTION: "option",
-  HEADER: "header",
-  TEXT: "text",
-  TABLE: "table",
-  RADIO: "radio",
-};
-
-// Message patterns
-export const MESSAGE_PATTERNS = {
-  GITHUB_URL_PROMPT: "Please enter a GitHub URL",
-  CONTRACT_SELECTION_PROMPT:
-    "Select the contracts and functions you want to test",
-  UPDATED_CHUNK_MAP_PROMPT: "Updated chunk map",
-  NON_DEPLOYABLE_FILES_PROMPT:
-    "file names that are not deployable like interfaces",
-  RUN_ANOTHER_MAS_PROMPT: "run another mas",
-  ENDING_RUN_MESSAGE: "Ending Run.",
-};
-
-// Run statuses
-export const RUN_STATUS = {
-  INITIALIZING: "Initializing",
-  STARTED: "Started",
-  ENDED: "Ended",
-  ERROR: "Error",
-  AT_CAPACITY: "At capacity",
-};
-
-/**
- * Hook to process WebSocket messages and provide message handlers
- */
 export const useWebSocketMessages = ({
   addMessage,
   addUserMessage,
@@ -74,12 +28,26 @@ export const useWebSocketMessages = ({
       const isOptionsCase = promptText.includes(
         MESSAGE_PATTERNS.CONTRACT_SELECTION_PROMPT
       );
+      const isChoice = promptText.includes(
+        MESSAGE_PATTERNS.WHAT_WOULD_YOU_LIKE_TO_DO_NEXT_PROMPT
+      );
       if (isOptionsCase) {
         try {
           const promptMsg = JSON.parse(promptText || "{}");
           promptText = promptMsg?.prompt || promptText;
           const options = promptMsg?.options || [];
           setExtraInput({ type: CONTENT_TYPES.OPTION, options });
+        } catch {
+          return;
+        }
+      }
+
+      if (isChoice) {
+        try {
+          const promptMsg = JSON.parse(promptText || "{}");
+          promptText = promptMsg?.prompt || promptText;
+          const options = promptMsg?.choices || [];
+          setExtraInput({ type: CONTENT_TYPES.CHOICE, options });
         } catch {
           return;
         }
@@ -280,38 +248,40 @@ export const useWebSocketMessages = ({
   );
 
   // Message type router
-  const messageHandlers = useMemo(
-    () => ({
-      [MESSAGE_TYPES.PROMPT]: handlePromptMessage,
-      [MESSAGE_TYPES.USER_INPUT]: handleUserInputMessage,
-      [MESSAGE_TYPES.DESCRIPTION]: handleDescriptionMessage,
-      [MESSAGE_TYPES.PLANNER_STEP]: handlePlannerStepMessage,
-      [MESSAGE_TYPES.EXECUTOR_TOOL_CALL]: handleExecutorToolCallMessage,
-      [MESSAGE_TYPES.EXECUTOR_TOOL_RESULT]: handleExecutorToolResultMessage,
-      [MESSAGE_TYPES.AGENT]: handleAgentMessage,
-      [MESSAGE_TYPES.OUTPUT]: handleOutputMessage,
-      [MESSAGE_TYPES.STDOUT]: handleOutputMessage,
-      [MESSAGE_TYPES.LOG]: handleOutputMessage,
-      [MESSAGE_TYPES.IDLE_TIMEOUT]: handleIdleTimeoutMessage,
-      [MESSAGE_TYPES.COMPLETE]: handleCompleteMessage,
-      [MESSAGE_TYPES.STDERR]: handleStderrMessage,
-      [MESSAGE_TYPES.ERROR]: handleErrorMessage,
-    }),
-    [
-      handlePromptMessage,
-      handleUserInputMessage,
-      handleDescriptionMessage,
-      handlePlannerStepMessage,
-      handleExecutorToolCallMessage,
-      handleExecutorToolResultMessage,
-      handleAgentMessage,
-      handleOutputMessage,
-      handleIdleTimeoutMessage,
-      handleCompleteMessage,
-      handleStderrMessage,
-      handleErrorMessage,
-    ]
-  );
+  const messageHandlers = useMemo(() => {
+    const map = {
+      [MESSAGE_TYPES.PROMPT.toLowerCase()]: handlePromptMessage,
+      [MESSAGE_TYPES.USER_INPUT.toLowerCase()]: handleUserInputMessage,
+      [MESSAGE_TYPES.DESCRIPTION.toLowerCase()]: handleDescriptionMessage,
+      [MESSAGE_TYPES.PLANNER_STEP.toLowerCase()]: handlePlannerStepMessage,
+      [MESSAGE_TYPES.EXECUTOR_TOOL_CALL.toLowerCase()]:
+        handleExecutorToolCallMessage,
+      [MESSAGE_TYPES.EXECUTOR_TOOL_RESULT.toLowerCase()]:
+        handleExecutorToolResultMessage,
+      [MESSAGE_TYPES.AGENT.toLowerCase()]: handleAgentMessage,
+      [MESSAGE_TYPES.OUTPUT.toLowerCase()]: handleOutputMessage,
+      [MESSAGE_TYPES.STDOUT.toLowerCase()]: handleOutputMessage,
+      [MESSAGE_TYPES.LOG.toLowerCase()]: handleOutputMessage,
+      [MESSAGE_TYPES.IDLE_TIMEOUT.toLowerCase()]: handleIdleTimeoutMessage,
+      [MESSAGE_TYPES.COMPLETE.toLowerCase()]: handleCompleteMessage,
+      [MESSAGE_TYPES.STDERR.toLowerCase()]: handleStderrMessage,
+      [MESSAGE_TYPES.ERROR.toLowerCase()]: handleErrorMessage,
+    };
+    return map;
+  }, [
+    handlePromptMessage,
+    handleUserInputMessage,
+    handleDescriptionMessage,
+    handlePlannerStepMessage,
+    handleExecutorToolCallMessage,
+    handleExecutorToolResultMessage,
+    handleAgentMessage,
+    handleOutputMessage,
+    handleIdleTimeoutMessage,
+    handleCompleteMessage,
+    handleStderrMessage,
+    handleErrorMessage,
+  ]);
 
   // ============================================================================
   // Message Processing
@@ -356,30 +326,42 @@ export const useWebSocketMessages = ({
   );
 
   const processMessage = useCallback(
-    (raw) => {
-      console.log("Processing message:", raw);
-
-      // Handle tagged envelopes (e.g., <<<DESCRIPTION>>>{json}<<<END_DESCRIPTION>>>)
-      if (typeof raw === "string" && handleTaggedEnvelope(raw)) {
-        return;
-      }
-
-      // Parse JSON message
-      let msg;
+    async (raw) => {
+      console.log("🚀 ~ raw:", raw);
       try {
-        msg = JSON.parse(raw || "{}");
-      } catch {
-        return; // Invalid JSON
-      }
+        // if it's a Blob, convert to text
+        if (typeof Blob !== "undefined" && raw instanceof Blob) {
+          raw = await raw.text();
+        }
 
-      if (!msg?.type) return;
+        // handle tagged envelopes (string only)
+        if (typeof raw === "string" && handleTaggedEnvelope(raw)) return;
 
-      // Route to appropriate handler
-      const messageType = String(msg.type).toLowerCase();
-      const handler = messageHandlers[messageType];
+        // if it's already an object, use it; otherwise parse
+        let msg;
+        if (typeof raw === "object") {
+          msg = raw;
+        } else {
+          try {
+            msg = JSON.parse(raw || "{}");
+          } catch (err) {
+            // invalid JSON — ignore or log
+            if (process.env.NODE_ENV === "development") {
+              console.warn("Invalid JSON message:", raw);
+            }
+            return;
+          }
+        }
 
-      if (handler) {
-        handler(msg);
+        if (!msg?.type) return;
+
+        const messageType = String(msg.type).toLowerCase();
+        const handler = messageHandlers[messageType];
+        if (handler) {
+          handler(msg);
+        }
+      } catch (err) {
+        console.error("processMessage error:", err);
       }
     },
     [handleTaggedEnvelope, messageHandlers]

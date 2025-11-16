@@ -1,154 +1,134 @@
 import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { WEBSOCKET_CLOSE_CODES } from "@/hook/useRuns";
-import { RUN_STATUS } from "./useWebSocketMessages";
-import { serviceGetRunStatus } from "@/services/runs";
+import { RUN_STATUS } from "@/constants/session";
+import { getSingletonWebSocket } from "@/lib/wsPool";
 // import { mockResultsHypothesis } from "@/mocks/mockHypothesis";
 
 export const useWebSocketConnection = ({
   socketUrl,
   runId,
   queryParamRunId,
-  getSingletonWS,
   handleGetUserSessions,
   processMessage,
-  saveWaitlistEmail,
+  handleSaveWaitlistEmail,
   setSessionName,
   setRunStatus,
-  router,
-  API_BASE,
+  runStatusData,
+  isRunStatusSuccess,
 }) => {
   const socketRef = useRef(null);
   const startedRef = useRef(false);
 
-  // Fetch run status using react-query
-  const { data: runStatusData, isSuccess: isRunStatusSuccess } = useQuery({
-    queryKey: ["runStatus", runId],
-    queryFn: () => {
-      return serviceGetRunStatus(runId);
-    },
+  // Store latest callbacks in refs to avoid stale closures
+  const processMessageRef = useRef(processMessage);
+  const handleGetUserSessionsRef = useRef(handleGetUserSessions);
+  const handleSaveWaitlistEmailRef = useRef(handleSaveWaitlistEmail);
+  const setSessionNameRef = useRef(setSessionName);
+  const setRunStatusRef = useRef(setRunStatus);
+
+  // Keep refs updated with latest callbacks
+  useEffect(() => {
+    processMessageRef.current = processMessage;
+    handleGetUserSessionsRef.current = handleGetUserSessions;
+    handleSaveWaitlistEmailRef.current = handleSaveWaitlistEmail;
+    setSessionNameRef.current = setSessionName;
+    setRunStatusRef.current = setRunStatus;
   });
+
+  // useEffect(() => {
+  //   mockResultsHypothesis.forEach((x) => {
+  //     processMessage(x.data);
+  //   });
+  // }, []);
 
   useEffect(() => {
     if (!socketUrl) return;
     if (!isRunStatusSuccess) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
 
-    if (!startedRef.current) {
-      startedRef.current = true;
-      console.log("Starting run for runId:", runId);
+    // only run on valid runStatus
+    const status = runStatusData?.status || "";
 
-      const startRunThenSocket = async () => {
-        try {
-          const isQueryParamRunId =
-            queryParamRunId && queryParamRunId.length > 0;
-
-          // Use runStatus from react-query if available
-          const socketStatus = runStatusData?.status || "";
-
-          if (
-            isQueryParamRunId ||
-            socketStatus === "started" ||
-            socketStatus === "running"
-          ) {
-            const socket = getSingletonWS(socketUrl);
-            socketRef.current = socket;
-
-            // Load user session when socket opens (for queryParamRunId)
-            const onOpen = async () => {
-              console.log("🚀 ~ WebSocket opened, loading session");
-              if (queryParamRunId) {
-                try {
-                  const userSession = await handleGetUserSessions(
-                    queryParamRunId
-                  );
-                  setSessionName(userSession?.session?.session_name || "");
-                } catch (error) {
-                  console.error("Failed to fetch user session:", error);
-                }
-              }
-            };
-
-            const onMessage = (event) => {
-              const raw = event.data;
-              if (raw instanceof Blob) {
-                raw
-                  .text()
-                  .then(processMessage)
-                  .catch(() => {});
-              } else {
-                processMessage(raw);
-              }
-            };
-
-            const onError = async (e) => {
-              console.error("WebSocket error:", e);
-              const email = prompt(
-                "Connection failed! Something went wrong on our end. Enter your email to be notified when we've got a fix:"
-              );
-              await saveWaitlistEmail(email);
-            };
-
-            const onClose = async (e) => {
-              if (
-                e.code !== WEBSOCKET_CLOSE_CODES.NORMAL &&
-                e.code !== WEBSOCKET_CLOSE_CODES.GOING_AWAY
-              ) {
-                const email = prompt(
-                  "Connection lost unexpectedly! Enter your email to be notified when we've resolved the issue:"
-                );
-                await saveWaitlistEmail(email);
-              }
-            };
-
-            // Add event listeners
-            socket.addEventListener("message", onMessage);
-            socket.addEventListener("error", onError);
-            socket.addEventListener("close", onClose);
-
-            // Load session if socket is already open, otherwise wait for open event
-            if (socket.readyState === WebSocket.OPEN) {
-              onOpen();
-            } else {
-              socket.addEventListener("open", onOpen, { once: true });
-            }
-          } else if (
-            socketStatus === "at_capacity" ||
-            socketStatus === "at capacity" ||
-            socketStatus === "queued"
-          ) {
-            setRunStatus(RUN_STATUS.AT_CAPACITY);
-            const email = prompt(
-              "Our server is at capacity! Enter your email to be notified when it's available again:"
-            );
-            await saveWaitlistEmail(email);
-            return;
-          } else {
-            setRunStatus(RUN_STATUS.ERROR);
-            console.warn("result status not parsed correctly");
-          }
-        } catch (error) {
-          console.error("Error in startRunThenSocket:", error);
-          console.error("Error details:", error.message, error.stack);
-        }
-      };
-
-      startRunThenSocket();
+    if (!["started", "running"].includes(status) && !queryParamRunId) {
+      if (["at_capacity", "queued", "at capacity"].includes(status)) {
+        setRunStatusRef.current(RUN_STATUS.AT_CAPACITY);
+        const email = prompt(
+          "Server is at capacity. Enter email to get notified:"
+        );
+        handleSaveWaitlistEmailRef.current(email);
+      } else {
+        setRunStatusRef.current(RUN_STATUS.ERROR);
+      }
+      return;
     }
-  }, [
-    socketUrl,
-    runId,
-    queryParamRunId,
-    getSingletonWS,
-    handleGetUserSessions,
-    processMessage,
-    saveWaitlistEmail,
-    setSessionName,
-    setRunStatus,
-    router,
-    API_BASE,
-    runStatusData,
-    isRunStatusSuccess,
-  ]);
 
-  return { socketRef, startedRef };
+    const ws = getSingletonWebSocket(socketUrl);
+    socketRef.current = ws;
+
+    // --- event handlers ---
+    const onOpen = async () => {
+      if (queryParamRunId) {
+        try {
+          const userSession = await handleGetUserSessionsRef.current(
+            queryParamRunId
+          );
+          setSessionNameRef.current(userSession?.session?.session_name || "");
+        } catch (err) {
+          console.error("Failed to fetch user session:", err);
+        }
+      }
+    };
+
+    const onMessage = (event) => {
+      const raw = event.data;
+      if (raw instanceof Blob) {
+        raw.text().then((text) => processMessageRef.current(text));
+      } else {
+        processMessageRef.current(raw);
+      }
+    };
+
+    const onError = async () => {
+      const email = prompt(
+        "Connection error. Enter your email to get notified when fixed:"
+      );
+      await handleSaveWaitlistEmailRef.current(email);
+    };
+
+    const onClose = async (e) => {
+      const code = e.code;
+
+      if (
+        code !== WEBSOCKET_CLOSE_CODES.NORMAL &&
+        code !== WEBSOCKET_CLOSE_CODES.GOING_AWAY
+      ) {
+        const email = prompt(
+          "Connection unexpectedly lost. Enter your email to be notified:"
+        );
+        await handleSaveWaitlistEmailRef.current(email);
+      }
+    };
+
+    // --- attach listeners (ONE TIME only) ---
+    ws.addEventListener("open", onOpen);
+    ws.addEventListener("message", onMessage);
+    ws.addEventListener("error", onError);
+    ws.addEventListener("close", onClose);
+
+    // If already open, call open function manually
+    if (ws.readyState === WebSocket.OPEN) {
+      onOpen();
+    }
+
+    // --- cleanup on unmount ---
+    return () => {
+      ws.removeEventListener("open", onOpen);
+      ws.removeEventListener("message", onMessage);
+      ws.removeEventListener("error", onError);
+      ws.removeEventListener("close", onClose);
+    };
+  }, [socketUrl, runId, queryParamRunId, runStatusData, isRunStatusSuccess]);
+
+  return { socketRef };
 };

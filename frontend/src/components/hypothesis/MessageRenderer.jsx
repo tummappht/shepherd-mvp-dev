@@ -2,8 +2,9 @@ import PropTypes from "prop-types";
 import TreeSelect from "../treeSelect/TreeSelect";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { MESSAGE_TYPES, CONTENT_TYPES } from "@/hook/useWebSocketMessages";
 import RunAnotherMasRadio from "@/app/mas-run/_components/RunAnotherMasRadio";
+import ChoiceRadio from "./ChoiceRadio";
+import { CONTENT_TYPES, MESSAGE_TYPES } from "@/constants/session";
 
 export default function MessageRenderer({ msg }) {
   const isFromUser = msg.from === "user";
@@ -11,6 +12,7 @@ export default function MessageRenderer({ msg }) {
   if (isFromUser) {
     const isOption = msg.type === CONTENT_TYPES.OPTION;
     const isRadio = msg.type === CONTENT_TYPES.RADIO;
+    const isChoice = msg.type === CONTENT_TYPES.CHOICE;
 
     if (isOption) {
       try {
@@ -30,6 +32,27 @@ export default function MessageRenderer({ msg }) {
 
     if (isRadio) {
       return <RunAnotherMasRadio value={msg.text} isReadOnly />;
+    }
+
+    if (isChoice) {
+      try {
+        const parsedChoice =
+          typeof msg.text === "string" ? JSON.parse(msg.text) : msg.text;
+        return (
+          <ChoiceRadio
+            options={parsedChoice.options || []}
+            value={msg.text}
+            isReadOnly
+          />
+        );
+      } catch (error) {
+        console.error("Failed to parse choice:", error, msg.text);
+        return (
+          <span className="whitespace-pre-wrap bg-background-light text-white border border-stroke-light py-3 px-5 rounded-lg w-full">
+            {msg.text}
+          </span>
+        );
+      }
     }
 
     return (
@@ -91,7 +114,7 @@ export default function MessageRenderer({ msg }) {
   }
 
   return (
-    <span className={`whitespace-pre-wrap pl-7 ${textColor}`}>{msg.text}</span>
+    <pre className={`whitespace-pre-wrap pl-7 ${textColor}`}>{msg.text}</pre>
   );
 }
 

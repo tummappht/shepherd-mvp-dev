@@ -38,3 +38,7 @@ export const getWebSocketUrl = (runId) => {
     return null;
   }
 };
+
+export const serviceGetContractNameList = async (formData) => {
+  return post(`/get-contract-name-list`, formData);
+};

@@ -27,8 +27,9 @@ const FileDropZone = forwardRef(
     const [files, setFiles] = useState([]);
     const [error, setError] = useState("");
     const fileInputRef = useRef(null);
+    const dropZoneRef = useRef(null);
 
-    // Expose files getter to parent via ref
+    // Expose files getter and focus method to parent via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -40,6 +41,13 @@ const FileDropZone = forwardRef(
             fileInputRef.current.value = "";
           }
           if (onChange) onChange([]);
+        },
+        focus: () => {
+          dropZoneRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          dropZoneRef.current?.focus();
         },
       }),
       [files, onChange]
@@ -189,6 +197,7 @@ const FileDropZone = forwardRef(
 
         {/* Drop zone */}
         <button
+          ref={dropZoneRef}
           className={`w-full h-full relative border-2 border-dashed rounded-lg p-6 transition-all duration-200 cursor-pointer ${
             dragActive
               ? "border-primary bg-primary/10"

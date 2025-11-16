@@ -85,7 +85,7 @@ export default function EditSessionNameModal({
               htmlFor="session_name"
               className="block text-sm font-medium text-foreground mb-2"
             >
-              Session Name <span className="text-red-500">*</span>
+              Session Name <span className="text-text-failed">*</span>
             </label>
             <input
               id="session_name"
@@ -107,7 +107,7 @@ export default function EditSessionNameModal({
               aria-invalid={errors.session_name ? "true" : "false"}
             />
             {errors.session_name && (
-              <span className="text-red-500 text-xs mt-1">
+              <span className="text-text-failed text-xs mt-1">
                 {errors.session_name.message}
               </span>
             )}

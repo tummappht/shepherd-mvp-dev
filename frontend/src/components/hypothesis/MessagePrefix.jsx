@@ -1,5 +1,5 @@
+import { CONTENT_TYPES, MESSAGE_TYPES } from "@/constants/session";
 import PropTypes from "prop-types";
-import { MESSAGE_TYPES, CONTENT_TYPES } from "@/hook/useWebSocketMessages";
 
 export default function MessagePrefix({ msg, index, messages }) {
   const isOption = msg.type === CONTENT_TYPES.OPTION;

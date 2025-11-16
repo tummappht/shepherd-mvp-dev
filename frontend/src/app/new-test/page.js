@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import FileDropZone from "@/components/FileDropZone";
+import ContractSelector from "@/components/ContractSelector";
 import Card, {
   CardContent,
   CardDescription,
@@ -12,12 +13,15 @@ import { FaSyncAlt, FaTimes } from "react-icons/fa";
 import { useRuns } from "@/hook/useRuns";
 import { useForm, Controller } from "react-hook-form";
 import ReferenceModal from "./_components/ReferenceModal";
+import { serviceGetContractNameList } from "@/services/runs";
 
 export default function NewTest() {
   const [isShowRef, setIsShowRef] = useState(false);
   const [selectedReference, setSelectedReference] = useState(null);
   const [attachedReference, setAttachedReference] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [contracts, setContracts] = useState([]);
+  const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
   const router = useRouter();
   const { handleStartRun } = useRuns();
@@ -25,14 +29,17 @@ export default function NewTest() {
     control,
     handleSubmit,
     register,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
       contactAsset: null,
-      tunnelUrl: "",
-      githubUrl: "",
+      selectedContracts: [],
+      tunnelUrl: "https://frame-charges-donated-embedded.trycloudflare.com",
+      githubUrl: "https://github.com/Cyfrin/2023-07-beedle",
       projectDescription: "",
     },
+    shouldFocusError: true,
   });
 
   const handleAttach = () => {
@@ -42,7 +49,43 @@ export default function NewTest() {
     }
   };
 
+  const handleContractAssetChange = async (files) => {
+    if (files && files.length > 0) {
+      setIsLoadingContracts(true);
+      try {
+        const formData = new FormData();
+        formData.append("run_id", crypto.randomUUID());
+        formData.append("assets", files[0]);
+
+        const response = await serviceGetContractNameList(formData);
+
+        if (response?.contracts) {
+          setContracts(response.contracts);
+          // Auto-select deployed and in-scope contracts
+          const autoSelectedContracts = response.contracts
+            .filter((c) => c.is_deployed && c.is_in_scope)
+            .map((c) => ({
+              contract_name: c.contract_name,
+              is_deployed: c.is_deployed,
+              is_in_scope: true,
+            }));
+          setValue("selectedContracts", autoSelectedContracts);
+        }
+      } catch (error) {
+        console.error("Failed to get contract names:", error);
+        setContracts([]);
+        setValue("selectedContracts", []);
+      } finally {
+        setIsLoadingContracts(false);
+      }
+    } else {
+      setContracts([]);
+      setValue("selectedContracts", []);
+    }
+  };
+
   const onSubmit = async (data) => {
+    console.log(data);
     setIsLoading(true);
     try {
       let sessionName = data.sessionName;
@@ -59,6 +102,12 @@ export default function NewTest() {
       formData.append("session_name", sessionName);
       if (data.contactAsset?.[0]) {
         formData.append("assets", data.contactAsset[0]);
+      }
+      if (data.selectedContracts?.length > 0) {
+        formData.append(
+          "contracts",
+          JSON.stringify({ contracts: data.selectedContracts })
+        );
       }
 
       if (Array.isArray(data.whitePaper)) {
@@ -92,53 +141,85 @@ export default function NewTest() {
           </CardDescription>
           <CardContent className="flex flex-col gap-4">
             <div>
-              <p className="mb-2">Contract Asset</p>
+              <p className="mb-2 font-semibold">Contract Asset</p>
               <Controller
                 control={control}
                 name="contactAsset"
-                rules={{ required: true }}
+                rules={{ required: "Please upload a contract asset zip file" }}
                 render={({ field }) => (
                   <FileDropZone
                     acceptedFileTypes=".zip"
                     maxFileSize={50 * 1024 * 1024} // 50MB
                     maxFiles={1}
                     {...field}
+                    onChange={(files) => {
+                      field.onChange(files);
+                      handleContractAssetChange(files);
+                    }}
                   />
                 )}
               />
               {errors.contactAsset && (
-                <span className="text-red-500 text-xs">
-                  Please upload a contract asset zip file.
+                <span className="text-text-failed text-xs">
+                  {errors.contactAsset.message}
                 </span>
               )}
             </div>
             <div>
-              <p className="mb-2">Tunnel URL</p>
+              <p className="mb-2 font-semibold">Select Contracts</p>
+              <Controller
+                control={control}
+                name="selectedContracts"
+                rules={{
+                  validate: (value) =>
+                    (value && value.length > 0) ||
+                    "Please select at least one contract. If no contracts are available, upload the contract asset to proceed.",
+                }}
+                render={({ field }) => (
+                  <ContractSelector
+                    contracts={contracts}
+                    isLoading={isLoadingContracts}
+                    {...field}
+                  />
+                )}
+              />
+              {errors.selectedContracts && (
+                <span className="text-text-failed text-xs">
+                  {errors.selectedContracts.message}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="mb-2 font-semibold">Tunnel URL</p>
               <input
                 type="text"
                 placeholder="Tunnel URL"
                 className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
-                {...register("tunnelUrl", { required: true })}
+                {...register("tunnelUrl", {
+                  required: "Tunnel URL is required",
+                })}
                 aria-invalid={errors.tunnelUrl ? "true" : "false"}
               />
               {errors.tunnelUrl && (
-                <span className="text-red-500 text-xs">
-                  This field is required
+                <span className="text-text-failed text-xs">
+                  {errors.tunnelUrl.message}
                 </span>
               )}
             </div>
             <div>
-              <p className="mb-2">Github URL</p>
+              <p className="mb-2 font-semibold">Github URL</p>
               <input
                 type="text"
                 placeholder="Github URL"
                 className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
-                {...register("githubUrl", { required: true })}
+                {...register("githubUrl", {
+                  required: "Github URL is required",
+                })}
                 aria-invalid={errors.githubUrl ? "true" : "false"}
               />
               {errors.githubUrl && (
-                <span className="text-red-500 text-xs">
-                  This field is required
+                <span className="text-text-failed text-xs">
+                  {errors.githubUrl.message}
                 </span>
               )}
             </div>
@@ -159,7 +240,7 @@ export default function NewTest() {
               aria-invalid={errors.sessionName ? "true" : "false"}
             />
             {errors.sessionName && (
-              <span className="text-red-500 text-xs">
+              <span className="text-text-failed text-xs">
                 This field is required
               </span>
             )}
@@ -173,7 +254,7 @@ export default function NewTest() {
           </CardDescription>
           <CardContent className="flex flex-col gap-4">
             <div>
-              <p className="mb-2">Description (Optional)</p>
+              <p className="mb-2 font-semibold">Description (Optional)</p>
               <textarea
                 className="w-full py-2 px-3 h-36 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
                 placeholder="Insert documentation..."
@@ -181,13 +262,13 @@ export default function NewTest() {
                 aria-invalid={errors.projectDescription ? "true" : "false"}
               />
               {errors.projectDescription && (
-                <span className="text-red-500 text-xs">
+                <span className="text-text-failed text-xs">
                   This field is required
                 </span>
               )}
             </div>
             <div>
-              <p className="mb-2">White Paper (Optional)</p>
+              <p className="mb-2 font-semibold">White Paper (Optional)</p>
               <Controller
                 control={control}
                 name="whitePaper"
@@ -263,7 +344,9 @@ export default function NewTest() {
           <CardContent>
             <select
               className="w-full py-2 px-4 border border-gray-border rounded-md bg-surface text-foreground"
-              {...register("environment", { required: true })}
+              {...register("environment", {
+                required: "Please select an environment",
+              })}
               aria-invalid={errors.environment ? "true" : "false"}
             >
               <option value="" disabled>
@@ -272,6 +355,11 @@ export default function NewTest() {
               <option value="local">Local</option>
               {/* <option value="testnet" disabled>Testnet</option> */}
             </select>
+            {errors.environment && (
+              <span className="text-text-failed text-xs">
+                {errors.environment.message}
+              </span>
+            )}
           </CardContent>
         </Card>
         <div className="flex flex-row justify-end items-center gap-4">

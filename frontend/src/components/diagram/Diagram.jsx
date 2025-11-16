@@ -15,6 +15,7 @@ import "reactflow/dist/style.css";
 import CustomNode from "./CustomNode";
 import { ExecutionDetailDrawer } from "./ExecutionDetailDrawer";
 import { useRuns } from "@/hook/useRuns";
+import { getSingletonWebSocket } from "@/lib/wsPool";
 
 /* ---------------- constants & helpers ---------------- */
 
@@ -110,7 +111,7 @@ function processMessages(messages) {
 }
 
 function DiagramInner({ queryParamRunId }) {
-  const { socketUrl, getSingletonWS } = useRuns(queryParamRunId);
+  const { socketUrl } = useRuns(queryParamRunId);
   const { fitView } = useReactFlow();
   const [selectedExecution, setSelectedExecution] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
@@ -122,7 +123,7 @@ function DiagramInner({ queryParamRunId }) {
   useEffect(() => {
     if (!socketUrl) return;
 
-    const ws = getSingletonWS(socketUrl);
+    const ws = getSingletonWebSocket(socketUrl);
 
     const onMessage = async (evt) => {
       let raw = evt.data;
@@ -165,7 +166,7 @@ function DiagramInner({ queryParamRunId }) {
       ws.removeEventListener("message", onMessage);
       ws.removeEventListener("error", onError);
     };
-  }, [socketUrl, getSingletonWS]);
+  }, [socketUrl, getSingletonWebSocket]);
 
   const { contractsMap, edgesData } = useMemo(
     () => processMessages(webSocketMessages),

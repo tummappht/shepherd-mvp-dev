@@ -77,7 +77,7 @@ export default function ReportBugModal({ isOpen, onClose }) {
               htmlFor="description"
               className="block text-sm font-medium text-foreground mb-2"
             >
-              Bug Description <span className="text-red-500">*</span>
+              Bug Description <span className="text-text-failed">*</span>
             </label>
             <textarea
               id="description"
@@ -94,7 +94,7 @@ export default function ReportBugModal({ isOpen, onClose }) {
               disabled={reportIssueMutation.isPending}
             />
             {errors.description && (
-              <span className="text-red-500 text-xs mt-1">
+              <span className="text-text-failed text-xs mt-1">
                 {errors.description.message}
               </span>
             )}
