@@ -85,7 +85,6 @@ export default function NewTest() {
   };
 
   const onSubmit = async (data) => {
-    console.log(data);
     setIsLoading(true);
     try {
       let sessionName = data.sessionName;
@@ -197,6 +196,11 @@ export default function NewTest() {
                 className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
                 {...register("tunnelUrl", {
                   required: "Tunnel URL is required",
+                  pattern: {
+                    value: /^https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com\s*$/,
+                    message:
+                      "Please enter a valid Cloudflare tunnel URL (e.g., https://example.trycloudflare.com)",
+                  },
                 })}
                 aria-invalid={errors.tunnelUrl ? "true" : "false"}
               />
@@ -214,6 +218,11 @@ export default function NewTest() {
                 className="w-full py-2 px-3 border border-gray-border rounded-md bg-surface text-foreground placeholder-helper placeholder:italic focus-visible:outline-none"
                 {...register("githubUrl", {
                   required: "Github URL is required",
+                  pattern: {
+                    value: /^https:\/\/github\.com\/[\w-]+\/[\w.-]+\/?$/,
+                    message:
+                      "Please enter a valid GitHub repository URL (e.g., https://github.com/username/repository)",
+                  },
                 })}
                 aria-invalid={errors.githubUrl ? "true" : "false"}
               />
