@@ -3,7 +3,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import FileDropZone from "@/components/FileDropZone";
-import ContractSelector from "@/components/ContractSelector";
 import Card, {
   CardContent,
   CardDescription,
@@ -13,15 +12,12 @@ import { FaSyncAlt, FaTimes } from "react-icons/fa";
 import { useRuns } from "@/hook/useRuns";
 import { useForm, Controller } from "react-hook-form";
 import ReferenceModal from "./_components/ReferenceModal";
-import { serviceGetContractNameList } from "@/services/runs";
 
 export default function NewTest() {
   const [isShowRef, setIsShowRef] = useState(false);
   const [selectedReference, setSelectedReference] = useState(null);
   const [attachedReference, setAttachedReference] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [contracts, setContracts] = useState([]);
-  const [isLoadingContracts, setIsLoadingContracts] = useState(false);
 
   const router = useRouter();
   const { handleStartRun } = useRuns();
@@ -29,58 +25,20 @@ export default function NewTest() {
     control,
     handleSubmit,
     register,
-    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
       contactAsset: null,
-      selectedContracts: [],
-      tunnelUrl: "https://frame-charges-donated-embedded.trycloudflare.com",
-      githubUrl: "https://github.com/Cyfrin/2023-07-beedle",
+      tunnelUrl: "",
+      githubUrl: "",
       projectDescription: "",
     },
-    shouldFocusError: true,
   });
 
   const handleAttach = () => {
     if (selectedReference) {
       setAttachedReference(selectedReference);
       setIsShowRef(false);
-    }
-  };
-
-  const handleContractAssetChange = async (files) => {
-    if (files && files.length > 0) {
-      setIsLoadingContracts(true);
-      try {
-        const formData = new FormData();
-        formData.append("run_id", crypto.randomUUID());
-        formData.append("assets", files[0]);
-
-        const response = await serviceGetContractNameList(formData);
-
-        if (response?.contracts) {
-          setContracts(response.contracts);
-          // Auto-select deployed and in-scope contracts
-          const autoSelectedContracts = response.contracts
-            .filter((c) => c.is_deployed && c.is_in_scope)
-            .map((c) => ({
-              contract_name: c.contract_name,
-              is_deployed: c.is_deployed,
-              is_in_scope: true,
-            }));
-          setValue("selectedContracts", autoSelectedContracts);
-        }
-      } catch (error) {
-        console.error("Failed to get contract names:", error);
-        setContracts([]);
-        setValue("selectedContracts", []);
-      } finally {
-        setIsLoadingContracts(false);
-      }
-    } else {
-      setContracts([]);
-      setValue("selectedContracts", []);
     }
   };
 
@@ -101,12 +59,6 @@ export default function NewTest() {
       formData.append("session_name", sessionName);
       if (data.contactAsset?.[0]) {
         formData.append("assets", data.contactAsset[0]);
-      }
-      if (data.selectedContracts?.length > 0) {
-        formData.append(
-          "contracts",
-          JSON.stringify({ contracts: data.selectedContracts })
-        );
       }
 
       if (Array.isArray(data.whitePaper)) {
@@ -151,40 +103,12 @@ export default function NewTest() {
                     maxFileSize={50 * 1024 * 1024} // 50MB
                     maxFiles={1}
                     {...field}
-                    onChange={(files) => {
-                      field.onChange(files);
-                      handleContractAssetChange(files);
-                    }}
                   />
                 )}
               />
               {errors.contactAsset && (
                 <span className="text-text-failed text-xs">
                   {errors.contactAsset.message}
-                </span>
-              )}
-            </div>
-            <div>
-              <p className="mb-2 font-semibold">Select Contracts</p>
-              <Controller
-                control={control}
-                name="selectedContracts"
-                rules={{
-                  validate: (value) =>
-                    (value && value.length > 0) ||
-                    "Please select at least one contract. If no contracts are available, upload the contract asset to proceed.",
-                }}
-                render={({ field }) => (
-                  <ContractSelector
-                    contracts={contracts}
-                    isLoading={isLoadingContracts}
-                    {...field}
-                  />
-                )}
-              />
-              {errors.selectedContracts && (
-                <span className="text-text-failed text-xs">
-                  {errors.selectedContracts.message}
                 </span>
               )}
             </div>
