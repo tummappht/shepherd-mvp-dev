@@ -296,7 +296,7 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
       </div>
 
       {/* Messages Container */}
-      <div className="flex flex-col flex-1 px-7 py-3 min-h-0">
+      <div className="flex flex-col flex-1 px-7 py-3 min-h-0 messages-container">
         <div className="flex-1 overflow-y-auto space-y-2">
           {messages.map((msg, index) => (
             <div key={index} className="flex gap-3 relative">
