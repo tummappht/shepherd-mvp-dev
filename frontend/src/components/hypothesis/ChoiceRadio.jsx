@@ -41,8 +41,8 @@ const ChoiceRadio = ({ options, value, isReadOnly, onChange }) => {
             htmlFor={`choice-${randKey}-${index}`}
             className={`block text-left text-sm py-2 px-4 rounded-md cursor-pointer transition-all duration-200 ease-in-out border ${
               selectedOption === choice.value
-                ? "bg-background-light text-white border-primary shadow-lg"
-                : "bg-background text-secondary border-stroke-light hover:bg-background-light hover:border-primary"
+                ? "bg-background-light text-white shadow-lg border-primary"
+                : "bg-background text-secondary border-stroke-light hover:bg-background-light hover:text-white"
             }`}
           >
             {choice.label}

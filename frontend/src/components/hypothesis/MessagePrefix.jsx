@@ -3,10 +3,11 @@ import PropTypes from "prop-types";
 
 export default function MessagePrefix({ msg, index, messages }) {
   const isOption = msg.type === CONTENT_TYPES.OPTION;
+  const isChoice = msg.type === CONTENT_TYPES.CHOICE;
   const isTable = msg.type === CONTENT_TYPES.TABLE;
   const isFromUser = msg.from === "user";
 
-  if (isFromUser || isOption || isTable) {
+  if (isFromUser || isOption || isChoice || isTable) {
     return null;
   }
 

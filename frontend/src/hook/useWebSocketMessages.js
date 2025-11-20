@@ -25,6 +25,8 @@ export const useWebSocketMessages = ({
       if (isReadOnly) return;
 
       let promptText = msg.data?.prompt || "";
+      setExtraInput({ label: promptText });
+
       const isOptionsCase = promptText.includes(
         MESSAGE_PATTERNS.CONTRACT_SELECTION_PROMPT
       );
@@ -36,7 +38,11 @@ export const useWebSocketMessages = ({
           const promptMsg = JSON.parse(promptText || "{}");
           promptText = promptMsg?.prompt || promptText;
           const options = promptMsg?.options || [];
-          setExtraInput({ type: CONTENT_TYPES.OPTION, options });
+          setExtraInput({
+            label: promptText,
+            type: CONTENT_TYPES.OPTION,
+            options,
+          });
         } catch {
           return;
         }
@@ -46,8 +52,16 @@ export const useWebSocketMessages = ({
         try {
           const promptMsg = JSON.parse(promptText || "{}");
           promptText = promptMsg?.prompt || promptText;
-          const options = promptMsg?.choices || [];
-          setExtraInput({ type: CONTENT_TYPES.CHOICE, options });
+          let options = promptMsg?.choices || [];
+          // start mockup
+          promptText = promptMsg.data.prompt.prompt || promptText;
+          options = promptMsg.data.prompt.choices || [];
+          // end mockup
+          setExtraInput({
+            label: promptText,
+            type: CONTENT_TYPES.CHOICE,
+            options,
+          });
         } catch {
           return;
         }
@@ -57,14 +71,14 @@ export const useWebSocketMessages = ({
         .toLowerCase()
         .includes(MESSAGE_PATTERNS.RUN_ANOTHER_MAS_PROMPT);
       if (isRunAnotherMasPrompt) {
-        setExtraInput({ type: CONTENT_TYPES.RADIO });
+        setExtraInput({ label: promptText, type: CONTENT_TYPES.RADIO });
       }
 
-      addMessage(promptText, MESSAGE_TYPES.PROMPT);
+      // addMessage(promptText, MESSAGE_TYPES.PROMPT);
       setWaitingForInput(true);
       focusInput();
     },
-    [addMessage, focusInput, setWaitingForInput, setExtraInput, isReadOnly]
+    [focusInput, setWaitingForInput, setExtraInput, isReadOnly]
   );
 
   const handleUserInputMessage = useCallback(

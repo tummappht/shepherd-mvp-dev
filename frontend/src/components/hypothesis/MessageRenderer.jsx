@@ -2,9 +2,9 @@ import PropTypes from "prop-types";
 import TreeSelect from "../treeSelect/TreeSelect";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import RunAnotherMasRadio from "@/app/mas-run/_components/RunAnotherMasRadio";
 import ChoiceRadio from "./ChoiceRadio";
 import { CONTENT_TYPES, MESSAGE_TYPES } from "@/constants/session";
+import RunAnotherMasRadio from "./RunAnotherMasRadio";
 
 export default function MessageRenderer({ msg }) {
   const isFromUser = msg.from === "user";
@@ -35,24 +35,13 @@ export default function MessageRenderer({ msg }) {
     }
 
     if (isChoice) {
-      try {
-        const parsedChoice =
-          typeof msg.text === "string" ? JSON.parse(msg.text) : msg.text;
-        return (
-          <ChoiceRadio
-            options={parsedChoice.options || []}
-            value={msg.text}
-            isReadOnly
-          />
-        );
-      } catch (error) {
-        console.error("Failed to parse choice:", error, msg.text);
-        return (
-          <span className="whitespace-pre-wrap bg-background-light text-white border border-stroke-light py-3 px-5 rounded-lg w-full">
-            {msg.text}
-          </span>
-        );
-      }
+      return (
+        <ChoiceRadio
+          options={msg.extraInput?.options || []}
+          value={msg.text}
+          isReadOnly
+        />
+      );
     }
 
     return (

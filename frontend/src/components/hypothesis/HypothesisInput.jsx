@@ -4,16 +4,21 @@ import { useMemo } from "react";
 import { TbArrowUp } from "react-icons/tb";
 import { useForm, Controller } from "react-hook-form";
 import TreeCheckboxList from "../treeSelect/TreeSelect";
-import RunAnotherMasRadio from "@/app/mas-run/_components/RunAnotherMasRadio";
 import { CONTENT_TYPES } from "@/constants/session";
 import ChoiceRadio from "./ChoiceRadio";
+import RunAnotherMasRadio from "./RunAnotherMasRadio";
 
 export default function HypothesisInput({
   waitingForInput = false,
   extraInput,
   handleSend = () => {},
 }) {
-  const type = useMemo(() => extraInput && extraInput.type, [extraInput]);
+  const label = useMemo(() => {
+    return extraInput && extraInput.label;
+  }, [extraInput]);
+  const type = useMemo(() => {
+    return extraInput && extraInput.type;
+  }, [extraInput]);
   const options = useMemo(
     () => (extraInput && extraInput.options) || [],
     [extraInput]
@@ -66,13 +71,19 @@ export default function HypothesisInput({
         value = data.hypothesisInput;
     }
 
-    handleSend(value, type);
+    handleSend(value, extraInput);
     reset();
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="-mt-3 mb-2 px-7">
+        <div className={`mb-3 gap-2 pl-7 relative messages-container`}>
+          <span
+            className={`border border-primary w-2 h-2 absolute top-2 left-2 rounded-full`}
+          />
+          <pre className={`whitespace-pre-wrap text-white`}>{label}</pre>
+        </div>
         {type == CONTENT_TYPES.OPTION && (
           <Controller
             name="selectedOptions"

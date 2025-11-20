@@ -66,8 +66,8 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
     setRunStatus(RUN_STATUS.STARTED);
   }, []);
 
-  const addUserMessage = useCallback((text, type) => {
-    setMessages((prev) => [...prev, { from: "user", text, type }]);
+  const addUserMessage = useCallback((text, type, extraInput = null) => {
+    setMessages((prev) => [...prev, { from: "user", text, type, extraInput }]);
   }, []);
 
   const focusInput = useCallback(() => {
@@ -152,27 +152,23 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
   }, [messages]);
 
   const handleSend = useCallback(
-    (value, type) => {
+    (value, extraInput) => {
       if (!waitingForInput) return;
+      const label = extraInput?.label;
+      const type = extraInput?.type;
 
-      const lastMessage = messages[messages.length - 1];
-      const lastMessageText = lastMessage?.text?.toLowerCase() || "";
-      const isSystemMessage = lastMessage?.from === "system";
+      addMessage(label, MESSAGE_TYPES.PROMPT);
 
-      const isAskingForInterfaces =
-        isSystemMessage &&
-        lastMessageText.includes(
-          MESSAGE_PATTERNS.NON_DEPLOYABLE_FILES_PROMPT.toLowerCase()
-        );
+      const isAskingForInterfaces = label.includes(
+        MESSAGE_PATTERNS.NON_DEPLOYABLE_FILES_PROMPT.toLowerCase()
+      );
       if (!value?.trim() && !isAskingForInterfaces) {
         return;
       }
 
-      const isRunAnotherPrompt =
-        isSystemMessage &&
-        lastMessageText.includes(
-          MESSAGE_PATTERNS.RUN_ANOTHER_MAS_PROMPT.toLowerCase()
-        );
+      const isRunAnotherPrompt = label.includes(
+        MESSAGE_PATTERNS.RUN_ANOTHER_MAS_PROMPT.toLowerCase()
+      );
 
       // Handle "run another MAS" prompt
       if (isRunAnotherPrompt) {
@@ -192,7 +188,7 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
       }
 
       // Handle regular input
-      addUserMessage(value, type);
+      addUserMessage(value, type, extraInput);
       sendSocketMessage(value);
       setWaitingForInput(false);
       setExtraInput(null);
