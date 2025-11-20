@@ -25,8 +25,8 @@ export default function HypothesisInput({
   );
 
   const isDisabledInput = useMemo(
-    () => extraInput || !waitingForInput,
-    [extraInput, waitingForInput]
+    () => type !== CONTENT_TYPES.INPUT || !waitingForInput,
+    [type, waitingForInput]
   );
 
   const inputPlaceHolder = useMemo(() => {
@@ -78,7 +78,7 @@ export default function HypothesisInput({
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="-mt-3 mb-2 px-7">
-        <div className={`mb-3 gap-2 pl-7 relative messages-container`}>
+        <div className={`my-3 gap-2 pl-7 relative messages-container`}>
           <span
             className={`border border-primary w-2 h-2 absolute top-2 left-2 rounded-full`}
           />

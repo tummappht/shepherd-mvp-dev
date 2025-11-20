@@ -25,7 +25,7 @@ export const useWebSocketMessages = ({
       if (isReadOnly) return;
 
       let promptText = msg.data?.prompt || "";
-      setExtraInput({ label: promptText });
+      setExtraInput({ label: promptText, type: CONTENT_TYPES.INPUT });
 
       const isOptionsCase = promptText.includes(
         MESSAGE_PATTERNS.CONTRACT_SELECTION_PROMPT
