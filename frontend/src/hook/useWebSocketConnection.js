@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { WEBSOCKET_CLOSE_CODES } from "@/hook/useRuns";
 import { RUN_STATUS } from "@/constants/session";
 import { getSingletonWebSocket } from "@/lib/wsPool";
-// import { mockResultsHypothesis } from "@/mocks/mockHypothesis";
 
 export const useWebSocketConnection = ({
   socketUrl,

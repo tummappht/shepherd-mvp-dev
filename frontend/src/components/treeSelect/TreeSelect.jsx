@@ -33,15 +33,37 @@ export default function TreeSelect({
 
   // Initialize tree data from options
   useEffect(() => {
-    if (options && options.length > 0) {
-      const initializeTree = (nodes) => {
-        return nodes.map((node) => ({
-          ...node,
-          selected: node.selected || false,
-          childs: node.childs ? initializeTree(node.childs) : [],
-        }));
+    if (options) {
+      const initializeTree = (nodes, isDeployed = true) => {
+        return nodes.map((node) => {
+          const chunks = node.chunks || node.childs || [];
+          const isChildSelected = chunks.some((chunk) => chunk.selected);
+          return {
+            ...node,
+            key: node.contract_name || node.chunk_name,
+            suffix: node.chunk_type || null,
+            isDeployed: isDeployed,
+            selected: node.selected || isChildSelected || false,
+            childs: chunks.length > 0 ? initializeTree(chunks, isDeployed) : [],
+          };
+        });
       };
-      setTreeData(initializeTree(options));
+
+      // Handle new structure with deployed/undeployed arrays
+      if (options.deployed || options.undeployed) {
+        const deployedNodes = options.deployed
+          ? initializeTree(options.deployed, true)
+          : [];
+        const undeployedNodes = options.undeployed
+          ? initializeTree(options.undeployed, false)
+          : [];
+        setTreeData([...deployedNodes, ...undeployedNodes]);
+      } else if (Array.isArray(options) && options.length > 0) {
+        // Handle legacy array structure
+        setTreeData(initializeTree(options));
+      } else {
+        setTreeData([]);
+      }
     }
   }, [options]);
 
@@ -101,8 +123,8 @@ export default function TreeSelect({
         }
         if (node.childs && node.childs.length > 0) {
           const updatedChilds = updateNode(node.childs, key, isChecked);
-          const allChecked = updatedChilds.every((c) => c.selected);
           const someChecked = updatedChilds.some((c) => c.selected);
+          // const allChecked = updatedChilds.every((c) => c.selected);
           // const hasIndeterminate = updatedChilds.some((c) => c.indeterminate);
           return {
             ...node,

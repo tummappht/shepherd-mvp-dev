@@ -230,7 +230,7 @@ const ContractSelector = forwardRef(function ContractSelector(
           </span>
         </div>
 
-        <div className={!isDeployed && "divide-y divide-gray-border/50"}>
+        <div className={!isDeployed ? "divide-y divide-gray-border/50" : ""}>
           {contracts.map((contract, index) => {
             const isSelected = selectedContracts.includes(
               contract.contract_name

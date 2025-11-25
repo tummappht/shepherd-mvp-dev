@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { TbArrowUp } from "react-icons/tb";
 import { useForm, Controller } from "react-hook-form";
 import TreeCheckboxList from "../treeSelect/TreeSelect";
-import { CONTENT_TYPES } from "@/constants/session";
+import { CONTENT_TYPES, MESSAGE_PATTERNS } from "@/constants/session";
 import ChoiceRadio from "./ChoiceRadio";
 import RunAnotherMasRadio from "./RunAnotherMasRadio";
 
@@ -59,6 +59,13 @@ export default function HypothesisInput({
     let value = "";
     switch (type) {
       case CONTENT_TYPES.OPTION:
+        const isChuckOptionsCase = label.includes(
+          MESSAGE_PATTERNS.CONTRACT_SELECTION_PROMPT
+        );
+        if (isChuckOptionsCase) {
+          value = JSON.stringify(parseChuckOptions(data.selectedOptions));
+          break;
+        }
         value = JSON.stringify(data.selectedOptions);
         break;
       case CONTENT_TYPES.RADIO:
@@ -70,9 +77,29 @@ export default function HypothesisInput({
       default:
         value = data.hypothesisInput;
     }
+    console.log("🚀 ~ HypothesisInput ~ value:", value);
 
     handleSend(value, extraInput);
     reset();
+  };
+
+  const parseChuckOptions = (options) => {
+    const deployed = [];
+    const undeployed = [];
+    options.forEach((opt) => {
+      const val = {
+        contract_name: opt.contract_name,
+        chunks: opt.childs,
+      };
+
+      if (opt.isDeployed) {
+        deployed.push(val);
+      } else {
+        undeployed.push(val);
+      }
+    });
+
+    return { deployed, undeployed };
   };
 
   return (

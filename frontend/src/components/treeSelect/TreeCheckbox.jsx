@@ -174,6 +174,11 @@ const TreeCheckbox = memo(
               {renderedLabel}
             </span>
           </div>
+          {data.suffix && (
+            <div className="ml-2 text-xs text-secondary italic select-none">
+              <span>{data.suffix}</span>
+            </div>
+          )}
           {hasChildren && (
             <button
               type="button"
@@ -191,9 +196,9 @@ const TreeCheckbox = memo(
 
         {hasChildren && isExpanded && (
           <div className="overflow-scroll max-h-40">
-            {data.childs.map((child) => (
+            {data.childs.map((child, i) => (
               <TreeCheckbox
-                key={child.key}
+                key={child.key + i}
                 data={child}
                 level={level + 1}
                 onCheck={onCheck}
