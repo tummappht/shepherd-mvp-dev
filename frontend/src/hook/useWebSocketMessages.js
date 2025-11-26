@@ -102,6 +102,34 @@ export const useWebSocketMessages = ({
       const isSystemMessage = Boolean(
         msg.data?.value === null || msg.data?.value === undefined
       );
+
+      const isChoice = promptText.includes(
+        MESSAGE_PATTERNS.WHAT_WOULD_YOU_LIKE_TO_DO_NEXT_PROMPT
+      );
+      if (isChoice) {
+        try {
+          const promptMsg = JSON.parse(promptText || "{}");
+          if (isSystemMessage) {
+            promptText = promptMsg.data?.prompt?.prompt || promptText;
+            addMessage(promptText, MESSAGE_TYPES.PROMPT);
+            return;
+          }
+          // start mockup
+          var choiceAndValue = promptMsg.data?.prompt?.choices;
+
+          addUserMessage(
+            JSON.stringify({ options: choiceAndValue, value }),
+            CONTENT_TYPES.CHOICE
+          );
+          // end mockup
+          return;
+        } catch {
+          addMessage(promptText, MESSAGE_TYPES.PROMPT);
+          return;
+        }
+      }
+
+      //Other Case
       if (isSystemMessage) {
         addMessage(promptText, MESSAGE_TYPES.PROMPT);
         return;

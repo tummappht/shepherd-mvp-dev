@@ -58,6 +58,7 @@ export default function Hypothesis({ queryParamRunId, queryParamSessionName }) {
     queryFn: () => {
       return serviceGetRunStatus(runId);
     },
+    retry: false,
   });
 
   const addMessage = useCallback((text, type = MESSAGE_TYPES.DESCRIPTION) => {

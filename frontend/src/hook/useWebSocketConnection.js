@@ -42,32 +42,35 @@ export const useWebSocketConnection = ({
 
   useEffect(() => {
     if (!socketUrl) return;
-    if (!isRunStatusSuccess) return;
     if (startedRef.current) return;
     startedRef.current = true;
 
-    // only run on valid runStatus
-    const status = runStatusData?.status || "";
+    if (!queryParamRunId) {
+      if (!isRunStatusSuccess) return;
 
-    if (!["started", "running"].includes(status) && !queryParamRunId) {
-      if (["at_capacity", "queued", "at capacity"].includes(status)) {
-        setRunStatusRef.current(RUN_STATUS.AT_CAPACITY);
-        const email = prompt(
-          "Server is at capacity. Enter email to get notified:"
-        );
-        handleSaveWaitlistEmailRef.current(email);
-      } else {
-        setRunStatusRef.current(RUN_STATUS.ERROR);
+      let status = runStatusData?.status || "";
+      if (!["started", "running"].includes(status) && !queryParamRunId) {
+        if (["at_capacity", "queued", "at capacity"].includes(status)) {
+          setRunStatusRef.current(RUN_STATUS.AT_CAPACITY);
+          const email = prompt(
+            "Server is at capacity. Enter email to get notified:"
+          );
+          handleSaveWaitlistEmailRef.current(email);
+        } else {
+          setRunStatusRef.current(RUN_STATUS.ERROR);
+        }
+        return;
       }
-      return;
     }
 
+    console.log("🚀 ~ useWebSocketConnection ~ socketUrl:", socketUrl);
     const ws = getSingletonWebSocket(socketUrl);
     socketRef.current = ws;
 
     // --- event handlers ---
     const onOpen = async () => {
       if (queryParamRunId) {
+        console.log("🚀 ~ onOpen ~ queryParamRunId:", queryParamRunId);
         try {
           const userSession = await handleGetUserSessionsRef.current(
             queryParamRunId
@@ -81,6 +84,7 @@ export const useWebSocketConnection = ({
 
     const onMessage = (event) => {
       const raw = event.data;
+      console.log("🚀 ~ onMessage ~ raw:", raw);
       if (raw instanceof Blob) {
         raw.text().then((text) => processMessageRef.current(text));
       } else {

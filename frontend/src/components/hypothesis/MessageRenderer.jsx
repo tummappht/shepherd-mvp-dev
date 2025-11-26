@@ -9,6 +9,7 @@ import RunAnotherMasRadio from "./RunAnotherMasRadio";
 export default function MessageRenderer({ msg }) {
   const isFromUser = msg.from === "user";
 
+  // console.log("🚀 ~ MessageRenderer ~ isFromUser:", isFromUser);
   if (isFromUser) {
     const isOption = msg.type === CONTENT_TYPES.OPTION;
     const isRadio = msg.type === CONTENT_TYPES.RADIO;
@@ -35,12 +36,11 @@ export default function MessageRenderer({ msg }) {
     }
 
     if (isChoice) {
+      var parsedChoice = JSON.parse(msg.text);
+      var choiceOptions = parsedChoice.options || [];
+      var value = parsedChoice.value || "";
       return (
-        <ChoiceRadio
-          options={msg.extraInput?.options || []}
-          value={msg.text}
-          isReadOnly
-        />
+        <ChoiceRadio options={choiceOptions || []} value={value} isReadOnly />
       );
     }
 
