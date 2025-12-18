@@ -36,7 +36,8 @@ export default function CreateUserPage() {
 
       setMessage({
         text: data.message,
-        userId: data.emailId,
+        userId: data.userId,
+        emailId: data.emailId,
         existed: data.existed,
       });
       setEmail(""); // Clear the form
@@ -99,13 +100,12 @@ export default function CreateUserPage() {
                       {message.text}
                       <br />
                       <span className="font-mono text-xs">
-                        Email ID: {message.userId}
+                        User ID: {message.userId}
                       </span>
-                      {message.existed && (
-                        <div className="mt-1 text-xs">
-                          (Email was already in the eligible list)
-                        </div>
-                      )}
+                      <br />
+                      <span className="font-mono text-xs">
+                        Eligible ID: {message.emailId}
+                      </span>
                     </div>
                   </div>
                 </div>

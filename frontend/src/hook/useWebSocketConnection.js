@@ -42,8 +42,6 @@ export const useWebSocketConnection = ({
 
   useEffect(() => {
     if (!socketUrl) return;
-    if (startedRef.current) return;
-    startedRef.current = true;
 
     if (!queryParamRunId) {
       if (!isRunStatusSuccess) return;
@@ -63,6 +61,9 @@ export const useWebSocketConnection = ({
       }
     }
 
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     console.log("🚀 ~ useWebSocketConnection ~ socketUrl:", socketUrl);
     const ws = getSingletonWebSocket(socketUrl);
     socketRef.current = ws;
@@ -70,7 +71,6 @@ export const useWebSocketConnection = ({
     // --- event handlers ---
     const onOpen = async () => {
       if (queryParamRunId) {
-        console.log("🚀 ~ onOpen ~ queryParamRunId:", queryParamRunId);
         try {
           const userSession = await handleGetUserSessionsRef.current(
             queryParamRunId

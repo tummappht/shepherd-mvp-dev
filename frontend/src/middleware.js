@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
 import NextAuth from "next-auth";
+import { ROLES } from "./constants/user";
 
 const { auth } = NextAuth(authConfig);
 
@@ -8,6 +9,7 @@ const { auth } = NextAuth(authConfig);
 const PUBLIC_PATHS = ["/login"];
 const LOGIN_PATH = "/login";
 const HOME_PATH = "/";
+const ADMIN_PATHS = ["/admin"];
 // const FORCE_SIGNOUT_PATH = "/api/auth/force-signout";
 
 // Regular expression to match static file extensions
@@ -26,21 +28,21 @@ export default auth(async function middleware(req) {
 
   const isEligible = session?.user?.isEligible === true;
   const hasSession = !!session?.user;
-  console.log("🚀 ~ middleware ~ hasSession:", hasSession);
-
-  // force sign-out for ineligible users
-  // if (hasSession && !isEligible) {
-  //   return NextResponse.redirect(new URL(FORCE_SIGNOUT_PATH, baseUrl));
-  // }
+  const userRole = session?.user?.role || ROLES.USER;
 
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
+  const isAdminPath = ADMIN_PATHS.some((path) => pathname.startsWith(path));
 
   if (!hasSession && !isPublicPath) {
     return NextResponse.redirect(new URL(LOGIN_PATH, baseUrl));
   }
 
-  console.log("🚀 ~ middleware ~ isEligible:", isEligible);
   if (hasSession && isEligible && pathname === LOGIN_PATH) {
+    return NextResponse.redirect(new URL(HOME_PATH, baseUrl));
+  }
+
+  // Check for admin access
+  if (isAdminPath && userRole !== ROLES.ADMIN) {
     return NextResponse.redirect(new URL(HOME_PATH, baseUrl));
   }
 

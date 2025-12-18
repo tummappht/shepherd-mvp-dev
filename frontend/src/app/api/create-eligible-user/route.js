@@ -1,87 +1,98 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(request) {
   try {
     const { email } = await request.json();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
-    if (!email || !email.includes("@")) {
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
       return NextResponse.json(
         { error: "Valid email is required" },
         { status: 400 }
       );
     }
 
-    // Check if email already exists in eligible_emails collection
     const eligibleEmailsRef = db.collection("eligible_emails");
-    const snapshot = await eligibleEmailsRef.where("email", "==", email).get();
+    const usersRef = db.collection("users");
 
-    if (!snapshot.empty) {
-      // Email already exists, update timestamp
-      const emailDoc = snapshot.docs[0];
-      await emailDoc.ref.update({
-        updatedAt: new Date().toISOString(),
-      });
+    const userSnap = await usersRef
+      .where("email", "==", normalizedEmail)
+      .limit(1)
+      .get();
+    const userDoc = userSnap.empty ? null : userSnap.docs[0];
+
+    // หา eligible doc
+    const eligibleSnap = await eligibleEmailsRef
+      .where("email", "==", normalizedEmail)
+      .limit(1)
+      .get();
+
+    if (!eligibleSnap.empty) {
+      const emailDoc = eligibleSnap.docs[0];
+      const emailData = emailDoc.data();
+
+      const updates = {
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      // ✅ เติม userId ถ้ามี user แล้ว และ eligible ยังไม่มี/ไม่ตรง
+      if (userDoc && emailData.userId !== userDoc.id) {
+        updates.userId = userDoc.id;
+      }
+
+      await emailDoc.ref.set(updates, { merge: true });
+
+      // (optional) mark user eligible
+      if (userDoc) {
+        await userDoc.ref.set(
+          { isEligible: true, updatedAt: FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      }
 
       return NextResponse.json({
         message: "Email already in eligible list.",
+        userId: userDoc ? userDoc.id : null,
         emailId: emailDoc.id,
         existed: true,
       });
     }
 
-    // Add new eligible email
-    const newEmailRef = await eligibleEmailsRef.add({
-      email,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+    // ✅ เพิ่มใหม่ พร้อม userId ถ้ามี user อยู่แล้ว
+    const payload = {
+      email: normalizedEmail,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (userDoc) payload.userId = userDoc.id;
 
-    // Also update existing user if they already signed in
-    const usersRef = db.collection("users");
-    const userSnapshot = await usersRef.where("email", "==", email).get();
+    const newEmailRef = await eligibleEmailsRef.add(payload);
 
-    if (!userSnapshot.empty) {
-      const userDoc = userSnapshot.docs[0];
-      await userDoc.ref.update({
-        isEligible: true,
-        updatedAt: new Date().toISOString(),
-      });
+    // (optional) mark user eligible
+    if (userDoc) {
+      await userDoc.ref.set(
+        { isEligible: true, updatedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
     }
 
     return NextResponse.json({
       message: "Email added to eligible list successfully",
+      userId: userDoc ? userDoc.id : null,
       emailId: newEmailRef.id,
       existed: false,
     });
   } catch (error) {
     console.error("Error creating eligible email:", error);
     return NextResponse.json(
-      { error: "Failed to add email", details: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET() {
-  try {
-    // Get all eligible emails for display
-    const eligibleEmailsRef = db.collection("eligible_emails");
-    const snapshot = await eligibleEmailsRef
-      .orderBy("createdAt", "desc")
-      .limit(50)
-      .get();
-
-    const emails = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    return NextResponse.json({ emails });
-  } catch (error) {
-    console.error("Error fetching eligible emails:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch emails", details: error.message },
+      {
+        error: "Failed to add email",
+        details: error?.message ?? String(error),
+      },
       { status: 500 }
     );
   }

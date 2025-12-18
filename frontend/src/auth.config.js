@@ -1,5 +1,6 @@
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
+import { ROLES } from "@/constants/user";
 
 export const authConfig = {
   providers: [Google, GitHub],
@@ -8,6 +9,7 @@ export const authConfig = {
       if (user) {
         token.id = user.id;
         token.isEligible = user.isEligible || false;
+        token.role = user.role || ROLES.USER;
       }
 
       const now = Math.floor(Date.now() / 1000);
@@ -39,6 +41,7 @@ export const authConfig = {
 
       session.user.id = token.sub || token.id;
       session.user.isEligible = token.isEligible;
+      session.user.role = token.role || ROLES.USER;
 
       // Store token metadata for client-side use
       session.customTokenIssued = token.customTokenIssued;

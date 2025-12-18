@@ -25,7 +25,13 @@ const fuzzyMatch = (str, pattern) => {
 };
 
 const ContractSelector = forwardRef(function ContractSelector(
-  { contracts = [], onChange, value = [], isLoading = false },
+  {
+    contracts = [],
+    onChange,
+    value = [],
+    isLoading = false,
+    emptyMessage = "No contracts available. Please upload a contract asset first.",
+  },
   ref
 ) {
   const [searchValue, setSearchValue] = useState("");
@@ -292,9 +298,7 @@ const ContractSelector = forwardRef(function ContractSelector(
   if (contracts.length === 0) {
     return (
       <div className="bg-surface border border-gray-border rounded-md p-8 text-center">
-        <p className="text-secondary text-md">
-          No contracts available. Please upload a contract asset first.
-        </p>
+        <p className="text-secondary text-md">{emptyMessage}</p>
       </div>
     );
   }
