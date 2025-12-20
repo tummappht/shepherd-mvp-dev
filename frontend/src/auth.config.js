@@ -11,6 +11,8 @@ export const authConfig = {
         token.isEligible = user.isEligible || false;
         token.role = user.role || ROLES.USER;
       }
+      console.log("🚀 ~ token:", token);
+      console.log("🚀 ~ user:", user);
 
       const now = Math.floor(Date.now() / 1000);
       const tokenMaxAge = 60 * 60; // 1 hour in seconds
