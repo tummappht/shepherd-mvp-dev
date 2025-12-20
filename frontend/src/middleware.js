@@ -42,9 +42,11 @@ export default auth(async function middleware(req) {
   }
 
   // Check for admin access
-  if (isAdminPath && userRole !== ROLES.ADMIN) {
-    return NextResponse.redirect(new URL(HOME_PATH, baseUrl));
-  }
+  // if (isAdminPath && userRole !== ROLES.ADMIN) {
+  console.log("🚀 ~ middleware ~ isAdminPath:", isAdminPath);
+  console.log("🚀 ~ middleware ~ userRole:", userRole);
+  //   return NextResponse.redirect(new URL(HOME_PATH, baseUrl));
+  // }
 
   return NextResponse.next();
 });
