@@ -9,7 +9,6 @@ import { serviceUserSessions } from "@/services/user";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import WelcomeModal from "@/components/modals/WelcomeModal";
 
-//TODO: Porto: Revised for the payment
 export default function Dashboard() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
