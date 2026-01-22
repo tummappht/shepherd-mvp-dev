@@ -17,6 +17,21 @@ let tokenCache = {
   fetchedAt: null,
 };
 
+// Pending token fetch promise to prevent concurrent requests
+let tokenFetchPromise = null;
+
+// Initialize cache from sessionStorage on load
+if (typeof window !== "undefined" && typeof sessionStorage !== "undefined") {
+  try {
+    const cached = sessionStorage.getItem("auth_token_cache");
+    if (cached) {
+      tokenCache = JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn("Failed to load token from sessionStorage:", e);
+  }
+}
+
 const getAuthToken = async () => {
   const now = Math.floor(Date.now() / 1000);
 
@@ -29,33 +44,64 @@ const getAuthToken = async () => {
     return tokenCache.token;
   }
 
-  // Fetch new token
-  try {
-    const tokenResponse = await fetch("/api/auth/token");
-    if (tokenResponse.ok) {
-      const { token, expiresAt } = await tokenResponse.json();
-      if (token) {
-        tokenCache = {
-          token,
-          expiresAt,
-          fetchedAt: now,
-        };
-        return token;
-      }
-    } else if (tokenResponse.status === 401) {
-      // Clear cache if unauthorized
-      tokenCache = { token: null, expiresAt: null, fetchedAt: null };
-    }
-  } catch (error) {
-    console.error("Failed to get auth token:", error);
+  // If a token fetch is already in progress, wait for it
+  if (tokenFetchPromise) {
+    return tokenFetchPromise;
   }
 
-  return null;
+  // Fetch new token with mutex pattern
+  tokenFetchPromise = (async () => {
+    try {
+      const tokenResponse = await fetch("/api/auth/token");
+      if (tokenResponse.ok) {
+        const { token, expiresAt } = await tokenResponse.json();
+        if (token) {
+          tokenCache = {
+            token,
+            expiresAt,
+            fetchedAt: now,
+          };
+
+          // Persist to sessionStorage
+          if (typeof sessionStorage !== "undefined") {
+            try {
+              sessionStorage.setItem(
+                "auth_token_cache",
+                JSON.stringify(tokenCache),
+              );
+            } catch (e) {
+              console.warn("Failed to save token to sessionStorage:", e);
+            }
+          }
+
+          return token;
+        }
+      } else if (tokenResponse.status === 401) {
+        // Clear cache if unauthorized
+        tokenCache = { token: null, expiresAt: null, fetchedAt: null };
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.removeItem("auth_token_cache");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to get auth token:", error);
+    } finally {
+      tokenFetchPromise = null;
+    }
+
+    return null;
+  })();
+
+  return tokenFetchPromise;
 };
 
 // Clear token cache (useful for logout)
 export const clearAuthToken = () => {
   tokenCache = { token: null, expiresAt: null, fetchedAt: null };
+  tokenFetchPromise = null;
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.removeItem("auth_token_cache");
+  }
 };
 
 export const callService = async (path, options = {}) => {
