@@ -55,12 +55,10 @@ export const useWebSocketConnection = ({
 
             // Load user session when socket opens (for queryParamRunId)
             const onOpen = async () => {
-              console.log("🚀 ~ WebSocket opened, loading session");
               if (queryParamRunId) {
                 try {
-                  const userSession = await handleGetUserSessions(
-                    queryParamRunId
-                  );
+                  const userSession =
+                    await handleGetUserSessions(queryParamRunId);
                   setSessionName(userSession?.session?.session_name || "");
                 } catch (error) {
                   console.error("Failed to fetch user session:", error);
@@ -83,7 +81,7 @@ export const useWebSocketConnection = ({
             const onError = async (e) => {
               console.error("WebSocket error:", e);
               const email = prompt(
-                "Connection failed! Something went wrong on our end. Enter your email to be notified when we've got a fix:"
+                "Connection failed! Something went wrong on our end. Enter your email to be notified when we've got a fix:",
               );
               await saveWaitlistEmail(email);
             };
@@ -94,7 +92,7 @@ export const useWebSocketConnection = ({
                 e.code !== WEBSOCKET_CLOSE_CODES.GOING_AWAY
               ) {
                 const email = prompt(
-                  "Connection lost unexpectedly! Enter your email to be notified when we've resolved the issue:"
+                  "Connection lost unexpectedly! Enter your email to be notified when we've resolved the issue:",
                 );
                 await saveWaitlistEmail(email);
               }
@@ -118,7 +116,7 @@ export const useWebSocketConnection = ({
           ) {
             setRunStatus(RUN_STATUS.AT_CAPACITY);
             const email = prompt(
-              "Our server is at capacity! Enter your email to be notified when it's available again:"
+              "Our server is at capacity! Enter your email to be notified when it's available again:",
             );
             await saveWaitlistEmail(email);
             return;
