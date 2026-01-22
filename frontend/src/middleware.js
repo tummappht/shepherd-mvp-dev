@@ -26,7 +26,6 @@ export default auth(async function middleware(req) {
 
   const isEligible = session?.user?.isEligible === true;
   const hasSession = !!session?.user;
-  console.log("🚀 ~ middleware ~ hasSession:", hasSession);
 
   // force sign-out for ineligible users
   // if (hasSession && !isEligible) {
@@ -39,7 +38,6 @@ export default auth(async function middleware(req) {
     return NextResponse.redirect(new URL(LOGIN_PATH, baseUrl));
   }
 
-  console.log("🚀 ~ middleware ~ isEligible:", isEligible);
   if (hasSession && isEligible && pathname === LOGIN_PATH) {
     return NextResponse.redirect(new URL(HOME_PATH, baseUrl));
   }
