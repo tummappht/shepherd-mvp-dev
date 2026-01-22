@@ -51,15 +51,12 @@ export default auth(async function middleware(req) {
   return NextResponse.next();
 });
 
-// CRITICAL: The matcher must exclude all paths handled by the Auth.js API.
-// Note: This pattern assumes your API handler is in /api/auth/[...nextauth]
 export const config = {
   matcher: [
-    //  Match all request paths except for the ones starting with:
-    //  - api (API routes)
-    //  - _next/static (static files)
-    //  - _next/image (image optimization files)
-    //  - favicon.ico (favicon file)
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/login",
+    "/admin/:path*",
+    "/dashboard/:path*",
+    "/mas-run/:path*",
+    "/new-test/:path*",
   ],
 };

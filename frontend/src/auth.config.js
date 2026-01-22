@@ -15,8 +15,8 @@ export const authConfig = {
       console.log("🚀 ~ user:", user);
 
       const now = Math.floor(Date.now() / 1000);
-      const tokenMaxAge = 60 * 60; // 1 hour in seconds
-      const refreshThreshold = 30 * 60; // Refresh if less than 30 minutes remaining
+      const tokenMaxAge = 15 * 60; // 15 minutes in seconds
+      const refreshThreshold = 5 * 60; // Refresh if less than 5 minutes remaining
 
       // Set token expiry when user first logs in
       if (user && !token.customTokenExpiry) {
@@ -24,7 +24,7 @@ export const authConfig = {
         token.customTokenIssued = now;
       }
 
-      // Check if custom token needs refresh (less than 30 minutes remaining)
+      // Auto-refresh token if less than 5 minutes remaining
       if (
         token.customTokenExpiry &&
         token.customTokenExpiry - now < refreshThreshold
@@ -54,7 +54,7 @@ export const authConfig = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60, // 1 hour in seconds
+    maxAge: 15 * 60, // 15 minutes in seconds
   },
   secret: process.env.AUTH_SECRET,
 };
